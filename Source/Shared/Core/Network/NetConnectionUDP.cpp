@@ -32,7 +32,7 @@ namespace {
 NetConnectionUDP::NetConnectionUDP(const std::string& InName)
     : Name(InName)
 {
-    RecieveBuffer.resize(64 * 1024);
+    ReceiveBuffer.resize(64 * 1024);
 }
 
 NetConnectionUDP::NetConnectionUDP(SocketType ParentSocket, sockaddr_in InDestination, const std::string& InName, const NetIPAddress& InAddress)
@@ -227,15 +227,15 @@ bool NetConnectionUDP::Connect(std::string Hostname, int Port, bool ForceLastIpE
     return true;
 }
 
-bool NetConnectionUDP::Peek(std::vector<uint8_t>& Buffer, int Offset, int Count, int& BytesRecieved)
+bool NetConnectionUDP::Peek(std::vector<uint8_t>& Buffer, int Offset, int Count, int& BytesReceived)
 {
-    if (RecieveQueue.size() == 0)
+    if (ReceiveQueue.size() == 0)
     {
-        BytesRecieved = 0;
+        BytesReceived = 0;
         return true;
     }
 
-    std::vector<uint8_t>& NextPacket = RecieveQueue[0];
+    std::vector<uint8_t>& NextPacket = ReceiveQueue[0];
     if (Count > NextPacket.size())
     {
         ErrorS(GetName().c_str(), "Unable to peek udp packet. Peek size is larger than datagram size.");
@@ -243,29 +243,29 @@ bool NetConnectionUDP::Peek(std::vector<uint8_t>& Buffer, int Offset, int Count,
     }
 
     memcpy(Buffer.data() + Offset, NextPacket.data(), Count);
-    BytesRecieved = Count;
+    BytesReceived = Count;
 
     return true;
 }
 
-bool NetConnectionUDP::Recieve(std::vector<uint8_t>& Buffer, int Offset, int Count, int& BytesRecieved)
+bool NetConnectionUDP::Receive(std::vector<uint8_t>& Buffer, int Offset, int Count, int& BytesReceived)
 {
-    if (RecieveQueue.size() == 0)
+    if (ReceiveQueue.size() == 0)
     {
-        BytesRecieved = 0;
+        BytesReceived = 0;
         return true;
     }
 
-    std::vector<uint8_t> NextPacket = RecieveQueue[0];
+    std::vector<uint8_t> NextPacket = ReceiveQueue[0];
     if (NextPacket.size() > Count)
     {
         ErrorS(GetName().c_str(), "Unable to recieve next udp packet, packet is larger than buffer. Packets must be recieved in their entirety.");
         return false;
     }
-    RecieveQueue.erase(RecieveQueue.begin());
+    ReceiveQueue.erase(ReceiveQueue.begin());
 
     memcpy(Buffer.data() + Offset, NextPacket.data(), NextPacket.size());
-    BytesRecieved = (int)NextPacket.size();
+    BytesReceived = (int)NextPacket.size();
 
     return true;
 }
@@ -363,7 +363,7 @@ void NetConnectionUDP::ProcessPacket(const PendingPacket& Packet)
                 if (Connection->Destination.sin_addr.s_addr == Packet.SourceAddress.sin_addr.s_addr &&
                     Connection->Destination.sin_port == Packet.SourceAddress.sin_port)
                 {
-                    Connection->RecieveQueue.push_back(Packet.Data);
+                    Connection->ReceiveQueue.push_back(Packet.Data);
                     bRoutedPacket = true;
                     break;
                 }
@@ -394,14 +394,14 @@ void NetConnectionUDP::ProcessPacket(const PendingPacket& Packet)
 #endif
 
             std::shared_ptr<NetConnectionUDP> NewConnection = std::make_shared<NetConnectionUDP>(Socket, Packet.SourceAddress, ClientName.data(), NetClientAddress);
-            NewConnection->RecieveQueue.push_back(Packet.Data);
+            NewConnection->ReceiveQueue.push_back(Packet.Data);
             NewConnections.push_back(NewConnection);
             ChildConnections.push_back(NewConnection);
         }
     }
     else
     {
-        RecieveQueue.push_back(Packet.Data);
+        ReceiveQueue.push_back(Packet.Data);
     }
 }
 
@@ -416,7 +416,7 @@ bool NetConnectionUDP::Pump()
     {
         while (true)
         {
-            // Recieve any pending datagrams and route to the appropriate child recieve queue.
+            // Receive any pending datagrams and route to the appropriate child recieve queue.
 
             socklen_t SourceAddressSize = sizeof(struct sockaddr);
             sockaddr_in SourceAddress = { 0 };
@@ -426,7 +426,7 @@ bool NetConnectionUDP::Pump()
             Flags |= MSG_DONTWAIT;
 #endif
 
-            int Result = recvfrom(Socket, (char*)RecieveBuffer.data(), (int)RecieveBuffer.size(), Flags, (sockaddr*)&SourceAddress, &SourceAddressSize);
+            int Result = recvfrom(Socket, (char*)ReceiveBuffer.data(), (int)ReceiveBuffer.size(), Flags, (sockaddr*)&SourceAddress, &SourceAddressSize);
             if (Result < 0)
             {
         #if defined(_WIN32)
@@ -450,7 +450,7 @@ bool NetConnectionUDP::Pump()
             }
             else if (Result > 0)
             {
-                std::vector<uint8_t> Packet(RecieveBuffer.data(), RecieveBuffer.data() + Result);
+                std::vector<uint8_t> Packet(ReceiveBuffer.data(), ReceiveBuffer.data() + Result);
 
                 bool bDropPacket = false;
 
@@ -481,14 +481,14 @@ bool NetConnectionUDP::Pump()
                     }
                 }
 
-                Debug::UdpBytesRecieved.Add(Result);
+                Debug::UdpBytesReceived.Add(Result);
 
                 //LogS(GetName().c_str(), "<< %i", Result);
             }
         }
     }
 
-    // Recieve pending packets.
+    // Receive pending packets.
     for (auto iter = PendingPackets.begin(); iter != PendingPackets.end(); /* empty */)
     {
         if (GetSeconds() > iter->ProcessTime)

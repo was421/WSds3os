@@ -30,7 +30,7 @@ MiscManager::MiscManager(Server* InServerInstance, GameService* InGameServiceIns
 {
 }
 
-MessageHandleResult MiscManager::OnMessageRecieved(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
+MessageHandleResult MiscManager::OnMessageReceived(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
 {
     if (Message.Header.msg_type == Frpg2ReliableUdpMessageType::RequestNotifyRingBell)
     {

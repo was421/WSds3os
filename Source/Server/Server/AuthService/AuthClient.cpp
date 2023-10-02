@@ -36,7 +36,7 @@ AuthClient::AuthClient(AuthService* OwningService, std::shared_ptr<NetConnection
     : Service(OwningService)
     , Connection(InConnection)
 {
-    LastMessageRecievedTime = GetSeconds();
+    LastMessageReceivedTime = GetSeconds();
 
     MessageStream = std::make_shared<Frpg2MessageStream>(InConnection, InServerRSAKey);
 }
@@ -44,7 +44,7 @@ AuthClient::AuthClient(AuthService* OwningService, std::shared_ptr<NetConnection
 bool AuthClient::Poll()
 {
     // Has this client timed out?
-    double TimeSinceLastMessage = GetSeconds() - LastMessageRecievedTime;
+    double TimeSinceLastMessage = GetSeconds() - LastMessageReceivedTime;
     if (TimeSinceLastMessage >= BuildConfig::CLIENT_TIMEOUT)
     {
         WarningS(GetName().c_str(), "Client timed out.");
@@ -76,7 +76,7 @@ bool AuthClient::Poll()
     case AuthClientState::WaitingForHandshakeRequest:
         {
             Frpg2Message Message;
-            if (MessageStream->Recieve(&Message))
+            if (MessageStream->Receive(&Message))
             {
                 if (Message.Header.msg_type != Frpg2MessageType::RequestHandshake)
                 {
@@ -117,7 +117,7 @@ bool AuthClient::Poll()
                 // Enable new aes-cwc-128 cipher.
                 MessageStream->SetCipher(std::make_shared<CWCCipher>(CwcKey), std::make_shared<CWCCipher>(CwcKey)); 
 
-                LastMessageRecievedTime = GetSeconds();
+                LastMessageReceivedTime = GetSeconds();
                 State = AuthClientState::WaitingForServiceStatusRequest;
             }
 
@@ -128,7 +128,7 @@ bool AuthClient::Poll()
     case AuthClientState::WaitingForServiceStatusRequest:
         {
             Frpg2Message Message;
-            if (MessageStream->Recieve(&Message))
+            if (MessageStream->Receive(&Message))
             {
                 if (Message.Header.msg_type != Frpg2MessageType::GetServiceStatus)
                 {
@@ -166,7 +166,7 @@ bool AuthClient::Poll()
                     return true;
                 }
 
-                LastMessageRecievedTime = GetSeconds();
+                LastMessageReceivedTime = GetSeconds();
                 State = AuthClientState::WaitingForKeyData;
             }
 
@@ -178,7 +178,7 @@ bool AuthClient::Poll()
     case AuthClientState::WaitingForKeyData:
         {
             Frpg2Message Message;
-            if (MessageStream->Recieve(&Message))
+            if (MessageStream->Receive(&Message))
             {
                 if (Message.Header.msg_type != Frpg2MessageType::KeyMaterial)
                 {
@@ -206,7 +206,7 @@ bool AuthClient::Poll()
                     return true;
                 }
 
-                LastMessageRecievedTime = GetSeconds();
+                LastMessageReceivedTime = GetSeconds();
                 State = AuthClientState::WaitingForSteamTicket;
             }
             break;
@@ -216,7 +216,7 @@ bool AuthClient::Poll()
     case AuthClientState::WaitingForSteamTicket:
         {
             Frpg2Message Message;
-            if (MessageStream->Recieve(&Message))
+            if (MessageStream->Receive(&Message))
             {
                 const RuntimeConfig& RuntimeConfig = Service->GetServer()->GetConfig();
                 std::string ServerIP = Service->GetServer()->GetPublicIP().ToString();
@@ -285,7 +285,7 @@ bool AuthClient::Poll()
                 std::shared_ptr<GameService> GameServiceInstance = Service->GetServer()->GetService<GameService>();
                 GameServiceInstance->CreateAuthToken(GameInfo.auth_token, GameCwcKey);
 
-                LastMessageRecievedTime = GetSeconds();
+                LastMessageReceivedTime = GetSeconds();
 
                 VerboseS(GetName().c_str(), "Authentication complete.");
                 State = AuthClientState::Complete;

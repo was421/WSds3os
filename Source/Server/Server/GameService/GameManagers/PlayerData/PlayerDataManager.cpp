@@ -26,7 +26,7 @@ PlayerDataManager::PlayerDataManager(Server* InServerInstance)
 {
 }
 
-MessageHandleResult PlayerDataManager::OnMessageRecieved(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
+MessageHandleResult PlayerDataManager::OnMessageReceived(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
 {
     if (Message.Header.msg_type == Frpg2ReliableUdpMessageType::RequestUpdateLoginPlayerCharacter)
     {

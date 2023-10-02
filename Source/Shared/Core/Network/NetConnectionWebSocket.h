@@ -1,6 +1,7 @@
+#pragma once
 /*
- * Dark Souls 3 - Open Server
- * Copyright (C) 2021 Tim Leonard
+ * Dark Souls 3 - Open WebSocket Server
+ * Copyright (C) 2023 Church Guard
  *
  * This program is free software; licensed under the MIT license.
  * You should have received a copy of the license along with this program.
@@ -10,42 +11,20 @@
 #pragma once
 
 #include "Shared/Core/Network/NetConnection.h"
-
-#if defined(_WIN32)
-#include <windows.h>
-#include <ws2tcpip.h>
-#include <winsock2.h>
-#else
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/tcp.h>
-#include <netinet/in.h>
-#include <fcntl.h>
-
-#define SOCKET_ERROR (-1)
-#endif
+#include "Shared/Core/Network/WebSocketProvider/WebSocketProvider.h"
 
 #include <stdlib.h>
+#include <future>
 
-class NetConnectionTCP
+class NetConnectionWebSocket
     : public NetConnection
 {
 public:
-#if defined(_WIN32)
-    using SocketType = SOCKET;
-    using SocketLenType = int;
-    const SocketType INVALID_SOCKET_VALUE = INVALID_SOCKET;
-#else
-    using SocketType = int;
-    using SocketLenType = socklen_t;
-    const SocketType INVALID_SOCKET_VALUE = -1;
-#endif
 
 public:
-    NetConnectionTCP(SocketType InSocket, const std::string& InName, const NetIPAddress& InAddress);
-    NetConnectionTCP(const std::string& InName);
-    virtual ~NetConnectionTCP();
+    NetConnectionWebSocket(websocketpp::connection_hdl hdl, const std::string& InName, const NetIPAddress& InAddress);
+    NetConnectionWebSocket(const std::string& InName);
+    virtual ~NetConnectionWebSocket();
 
     virtual bool Listen(int Port) override;
 
@@ -68,18 +47,16 @@ public:
     virtual std::string GetName() override;
     virtual void Rename(const std::string& Name) override;
 
-protected:
-
-    bool SendPartial(const std::vector<uint8_t>& Buffer, int Offset, int Count, int& BytesSent);
-
 private:
+    websocketpp::connection_hdl Handle;
     std::string Name;
     NetIPAddress IPAddress;
 
     bool HasDisconnected = false;
 
-    SocketType Socket = INVALID_SOCKET_VALUE;
-
     std::vector<uint8_t> SendQueue;
 
+    //
+    WebSocketProvider* wsp = WebSocketProvider::GetInstance();
+    websocketpp::server<websocketpp::config::asio>* server;
 };

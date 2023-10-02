@@ -28,7 +28,7 @@ VisitorManager::VisitorManager(Server* InServerInstance, GameService* InGameServ
 {
 }
 
-MessageHandleResult VisitorManager::OnMessageRecieved(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
+MessageHandleResult VisitorManager::OnMessageReceived(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
 {
     if (Message.Header.msg_type == Frpg2ReliableUdpMessageType::RequestGetVisitorList)
     {
@@ -243,7 +243,7 @@ MessageHandleResult VisitorManager::Handle_RequestRejectVisit(GameClient* Client
     }
 
 #ifdef _DEBUG
-    LogS(Client->GetName().c_str(), "Recieved rejection of visit requested by player: %s", InitiatorClient->GetName().c_str());
+    LogS(Client->GetName().c_str(), "Received rejection of visit requested by player: %s", InitiatorClient->GetName().c_str());
     Log("player_id: %i", Request->player_id());
     Log("map_id: %i", Request->map_id());
     Log("online_area_id: %i", Request->online_area_id());

@@ -74,7 +74,7 @@ void BloodMessageManager::TrimDatabase()
     Database.TrimBloodMessages(MaxEntries);
 }
 
-MessageHandleResult BloodMessageManager::OnMessageRecieved(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
+MessageHandleResult BloodMessageManager::OnMessageReceived(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
 {
     if (Message.Header.msg_type == Frpg2ReliableUdpMessageType::RequestReentryBloodMessage)
     {

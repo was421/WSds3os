@@ -28,7 +28,7 @@ LoginClient::LoginClient(LoginService* OwningService, std::shared_ptr<NetConnect
     : Service(OwningService)
     , Connection(InConnection)
 {
-    LastMessageRecievedTime = GetSeconds();
+    LastMessageReceivedTime = GetSeconds();
 
     MessageStream = std::make_shared<Frpg2MessageStream>(InConnection, InServerRSAKey);
 }
@@ -36,7 +36,7 @@ LoginClient::LoginClient(LoginService* OwningService, std::shared_ptr<NetConnect
 bool LoginClient::Poll()
 {
     // Has this client timed out?
-    double TimeSinceLastMessage = GetSeconds() - LastMessageRecievedTime;
+    double TimeSinceLastMessage = GetSeconds() - LastMessageReceivedTime;
     if (TimeSinceLastMessage >= BuildConfig::CLIENT_TIMEOUT)
     {
         WarningS(GetName().c_str(), "Client timed out.");
@@ -63,7 +63,7 @@ bool LoginClient::Poll()
     }
 
     Frpg2Message Message;
-    while (MessageStream->Recieve(&Message))
+    while (MessageStream->Receive(&Message))
     {
         if (Message.Header.msg_type != Frpg2MessageType::RequestQueryLoginServerInfo)
         {
@@ -101,7 +101,7 @@ bool LoginClient::Poll()
             return true;
         }
 
-        LastMessageRecievedTime = GetSeconds();
+        LastMessageReceivedTime = GetSeconds();
     }
 
     return false;

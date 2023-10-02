@@ -72,7 +72,7 @@ void SignManager::Poll()
 {
 }
 
-MessageHandleResult SignManager::OnMessageRecieved(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
+MessageHandleResult SignManager::OnMessageReceived(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
 {
     if (Message.Header.msg_type == Frpg2ReliableUdpMessageType::RequestGetSignList)
     {

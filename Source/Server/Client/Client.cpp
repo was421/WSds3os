@@ -46,7 +46,7 @@ Client::Client()
     // Register for Ctrl+C notifications, its the only way the server shuts down right now.
     CtrlSignalHandle = PlatformEvents::OnCtrlSignal.Register([=]() {
         Warning("Quit signal recieved, starting shutdown.");        
-        QuitRecieved = true;
+        QuitReceived = true;
     });
 }
 
@@ -112,7 +112,7 @@ bool Client::Init(bool InDisablePersistentData, size_t InInstanceId)
         if (AppTicketHandle != k_HAuthTicketInvalid)
         {
             AppTicket.resize(TicketLength);
-            LogS(GetName().c_str(), "Recieved auth session ticket of length %i", TicketLength);
+            LogS(GetName().c_str(), "Received auth session ticket of length %i", TicketLength);
         }
         else
         {
@@ -159,7 +159,7 @@ void Client::RunUntilQuit()
     // This suffices for now.
     try
     {
-        while (!QuitRecieved)
+        while (!QuitReceived)
         {
             switch (State)
             {
@@ -204,7 +204,7 @@ std::string Client::GetName()
 
 void Client::WaitForNextMessage(std::shared_ptr<NetConnection> Connection, std::shared_ptr<Frpg2MessageStream> Stream, Frpg2Message& Output)
 {
-    while (!Stream->Recieve(&Output))
+    while (!Stream->Receive(&Output))
     {
         if (Connection->Pump())
         {
@@ -237,7 +237,7 @@ void Client::SendAndAwaitWaitForReply(google::protobuf::MessageLite* Request, Fr
 
         Frpg2ReliableUdpMessage Message;
 
-        if (GameServerMessageStream->Recieve(&Message))
+        if (GameServerMessageStream->Receive(&Message))
         {
             GameServerMessageStream->HandledPacket(Message.AckSequenceIndex);
 
@@ -297,7 +297,7 @@ void Client::Handle_LoginServer_RequestServerInfo()
     AuthServerIP = TypedResponse.server_ip();
     AuthServerPort = (int)TypedResponse.port();
 
-    LogS(GetName().c_str(), "Recieved auth server info: %s:%i", AuthServerIP.c_str(), AuthServerPort);
+    LogS(GetName().c_str(), "Received auth server info: %s:%i", AuthServerIP.c_str(), AuthServerPort);
 
     LoginServerConnection->Disconnect();
     LoginServerConnection = nullptr;
@@ -370,7 +370,7 @@ void Client::Handle_AuthServer_RequestServiceStatus()
 
     ChangeState(ClientState::AuthServer_ExchangeKeyData);
 
-    LogS(GetName().c_str(), "Recieved service status from auth server.");
+    LogS(GetName().c_str(), "Received service status from auth server.");
 }
 
 void Client::Handle_AuthServer_ExchangeKeyData()
@@ -420,7 +420,7 @@ void Client::Handle_AuthServer_GetServerInfo()
 
     ChangeState(ClientState::GameServer_Connect);
 
-    LogS(GetName().c_str(), "Recieved game server info: %s:%i (auth token: 0x%016llx)", GameInfo.game_server_ip, GameInfo.game_port, GameInfo.auth_token);
+    LogS(GetName().c_str(), "Received game server info: %s:%i (auth token: 0x%016llx)", GameInfo.game_server_ip, GameInfo.game_port, GameInfo.auth_token);
 }
 
 void Client::Handle_GameServer_Connect()
@@ -486,7 +486,7 @@ void Client::Handle_GameServer_RequestGetAnnounceMessageList()
     Frpg2RequestMessage::RequestGetAnnounceMessageListResponse Response;
     SendAndAwaitWaitForReply(&Request, &Response);
 
-    LogS(GetName().c_str(), "Recieved announcements.");
+    LogS(GetName().c_str(), "Received announcements.");
     LogS(GetName().c_str(), "\tChanges=%i", Response.changes().items_size());
     LogS(GetName().c_str(), "\tNotices=%i", Response.notices().items_size());
 
@@ -519,7 +519,7 @@ void Client::Handle_GameServer_RequestUpdateLoginPlayerCharacter()
 
     ServerCharacterId = Response.character_id();
 
-    LogS(GetName().c_str(), "Recieved update login player character response.");
+    LogS(GetName().c_str(), "Received update login player character response.");
     LogS(GetName().c_str(), "\tLocal Character Id=%i", LocalCharacterId);
     LogS(GetName().c_str(), "\tServer Character Id=%i", ServerCharacterId);
     LogS(GetName().c_str(), "\tQuick Match Brawl Rank: Rank=%i XP=%i", Response.quickmatch_brawl_rank().rank(), Response.quickmatch_brawl_rank().xp());
@@ -549,7 +549,7 @@ void Client::Handle_GameServer_RequestUpdatePlayerStatus()
     Frpg2RequestMessage::RequestUpdatePlayerStatusResponse Response;
     SendAndAwaitWaitForReply(&Request, &Response);
 
-    LogS(GetName().c_str(), "Recieved update player status response.");
+    LogS(GetName().c_str(), "Received update player status response.");
 
     ChangeState(ClientState::GameServer_RequestUpdatePlayerCharacter);
 }
@@ -567,7 +567,7 @@ void Client::Handle_GameServer_RequestUpdatePlayerCharacter()
     Frpg2RequestMessage::RequestUpdatePlayerCharacterResponse Response;
     SendAndAwaitWaitForReply(&Request, &Response);
 
-    Log("Recieved update player character response.");
+    Log("Received update player character response.");
 
     ChangeState(ClientState::GameServer_RequestGetRightMatchingArea);
 }
@@ -593,7 +593,7 @@ void Client::Handle_GameServer_RequestGetRightMatchingArea()
     Frpg2RequestMessage::RequestGetRightMatchingAreaResponse Response;
     SendAndAwaitWaitForReply(&Request, &Response);
 
-    LogS(GetName().c_str(), "Recieved populated matching areas.");
+    LogS(GetName().c_str(), "Received populated matching areas.");
     for (int i = 0; i < Response.area_info_size(); i++)
     {
         const Frpg2RequestMessage::RequestGetRightMatchingAreaResponse_Area_info& AreaInfo = Response.area_info(i);
@@ -702,7 +702,7 @@ void Client::Handle_GameServer_Idle()
     Frpg2RequestMessage::RequestGetRegulationFileResponse Response;
     SendAndAwaitWaitForReply(&Request, &Response);
 
-    Log("Recieved regulation file response");
+    Log("Received regulation file response");
     */
     ChangeState(ClientState::Complete);
 }

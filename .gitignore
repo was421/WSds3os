@@ -69,3 +69,8 @@ node_modules/
 Tools/Utilities/ScyllaHide/
 Tools/Utilities/ServerAddressFinder/
 Tools/Deploy/
+
+#random
+build/
+out/
+.vscode/

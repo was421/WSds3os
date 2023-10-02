@@ -30,7 +30,7 @@ void BreakInManager::OnLostPlayer(GameClient* Client)
 {
 }
 
-MessageHandleResult BreakInManager::OnMessageRecieved(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
+MessageHandleResult BreakInManager::OnMessageReceived(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
 {
     if (Message.Header.msg_type == Frpg2ReliableUdpMessageType::RequestGetBreakInTargetList)
     {

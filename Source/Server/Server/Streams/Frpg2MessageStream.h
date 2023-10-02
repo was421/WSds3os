@@ -31,7 +31,7 @@ public:
     virtual bool Send(google::protobuf::MessageLite* Message, Frpg2MessageType MessageType, uint32_t ResponseToRequestIndex = 0);
 
     // Returns true if a packet was recieved and stores packet in OutputPacket.
-    virtual bool Recieve(Frpg2Message* Message);
+    virtual bool Receive(Frpg2Message* Message);
 
     // Changes the cipher used for encryption/descryption.
     virtual void SetCipher(std::shared_ptr<Cipher> Encryption, std::shared_ptr<Cipher> Decryption);

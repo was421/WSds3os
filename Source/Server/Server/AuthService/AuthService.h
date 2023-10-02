@@ -17,7 +17,7 @@
 class Server;
 class AuthClient;
 class NetConnection;
-class NetConnectionTCP;
+class NetConnectionWebSocket;
 class RSAKeyPair;
 
 // The auth service is accessed by the client from an ip:port provided by 
@@ -47,7 +47,7 @@ protected:
 private:
     Server* ServerInstance;
 
-    std::shared_ptr<NetConnectionTCP> Connection;
+    std::shared_ptr<NetConnection> Connection;
 
     std::vector<std::shared_ptr<AuthClient>> Clients;
 

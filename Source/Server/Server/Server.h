@@ -112,7 +112,7 @@ protected:
 
 private:
 
-    bool QuitRecieved = false;
+    bool QuitReceived = false;
 
     PlatformEvents::CtrlSignalEvent::DelegatePtr CtrlSignalHandle = nullptr;
 

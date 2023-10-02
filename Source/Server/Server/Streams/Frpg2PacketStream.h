@@ -33,7 +33,7 @@ public:
     virtual bool Send(const Frpg2Packet& Packet);
 
     // Returns true if a packet was recieved and stores packet in OutputPacket.
-    virtual bool Recieve(Frpg2Packet* OutputPacket);
+    virtual bool Receive(Frpg2Packet* OutputPacket);
 
     // Allows enabling or disabling of this streams attempts to retrieve packets
     // from the network connection. Can be used when you temporarily need to communicate
@@ -54,10 +54,10 @@ protected:
 
 private:
 
-    std::vector<Frpg2Packet> RecieveQueue;
+    std::vector<Frpg2Packet> ReceiveQueue;
 
     std::vector<uint8_t> PacketBuffer;
-    uint16_t PacketBytesRecieved = 0;
+    uint16_t PacketBytesReceived = 0;
     bool RecievingPacketHeader = false;
 
     uint16_t PacketsSent = 0;

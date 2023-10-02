@@ -71,7 +71,7 @@ private:
 
     bool IsDisconnecting = false;
 
-    double LastMessageRecievedTime = 0.0;
+    double LastMessageReceivedTime = 0.0;
 
     PlayerState State;
 

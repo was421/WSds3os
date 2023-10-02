@@ -156,7 +156,7 @@ void Injector::RunUntilQuit()
 
     // We should really do this event driven ...
     // This suffices for now.
-    while (!QuitRecieved)
+    while (!QuitReceived)
     {
         // TODO: Do any polling we need to do here ...
 

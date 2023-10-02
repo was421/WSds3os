@@ -25,7 +25,7 @@ LoggingManager::LoggingManager(Server* InServerInstance)
 {
 }
 
-MessageHandleResult LoggingManager::OnMessageRecieved(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
+MessageHandleResult LoggingManager::OnMessageReceived(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
 {
     if (Message.Header.msg_type == Frpg2ReliableUdpMessageType::RequestNotifyProtoBufLog)
     {
@@ -241,14 +241,14 @@ void LoggingManager::Handle_GetItemLog(GameClient* Client, Frpg2RequestMessage::
     {
         const FpdLogMessage::GetItemLog_Get_item_info_list& Item = Log.get_item_info_list(i);
 
-        std::string StatisticKey = StringFormat("Item/TotalRecieved/Id=%u", Item.item_id());
+        std::string StatisticKey = StringFormat("Item/TotalReceived/Id=%u", Item.item_id());
         Database.AddGlobalStatistic(StatisticKey, Item.count());
         Database.AddPlayerStatistic(StatisticKey, Player.GetPlayerId(), Item.count());
 
         TotalCount += Item.count();
     }
 
-    std::string TotalStatisticKey = StringFormat("Item/TotalRecieved");
+    std::string TotalStatisticKey = StringFormat("Item/TotalReceived");
     Database.AddGlobalStatistic(TotalStatisticKey, TotalCount);
     Database.AddPlayerStatistic(TotalStatisticKey, Player.GetPlayerId(), TotalCount);
 }
@@ -382,7 +382,7 @@ void LoggingManager::Handle_VisitResultLog(GameClient* Client, Frpg2RequestMessa
     }
 
 #ifdef _DEBUG
-    LogS(Client->GetName().c_str(), "Recieved VisitResultLog from: %s", Client->GetName().c_str());
+    LogS(Client->GetName().c_str(), "Received VisitResultLog from: %s", Client->GetName().c_str());
     Log("map_id: %i", Log.map_id());
     Log("location: %.2f, %.2f, %.2f", Log.location().x(), Log.location().y(), Log.location().z());
     Log("online_area_id_source: %i", Log.online_area_id_source());

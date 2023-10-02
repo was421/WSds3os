@@ -46,7 +46,7 @@ Server::Server()
     // Register for Ctrl+C notifications, its the only way the server shuts down right now.
     CtrlSignalHandle = PlatformEvents::OnCtrlSignal.Register([=]() {
         Warning("Quit signal recieved, starting shutdown.");        
-        QuitRecieved = true;
+        QuitReceived = true;
     });
 
     // Register all services we want to run.
@@ -249,7 +249,7 @@ bool Server::ParseServerAdvertisementResponse(std::shared_ptr<NetHttpResponse> R
         json = nlohmann::json::parse(JsonResponse);
         if (!json.contains("status"))
         {
-            Warning("Recieved error when trying to advertise server on master server. Malformed output.");
+            Warning("Received error when trying to advertise server on master server. Malformed output.");
             return false;
         }
         else if (json["status"] != "success")
@@ -257,12 +257,12 @@ bool Server::ParseServerAdvertisementResponse(std::shared_ptr<NetHttpResponse> R
             if (json.contains("message"))
             {
                 std::string message = json["message"];
-                Warning("Recieved error when trying to advertise server on master server. Error message: %s", message.c_str());
+                Warning("Received error when trying to advertise server on master server. Error message: %s", message.c_str());
                 return false;
             }
             else
             {
-                Warning("Recieved error when trying to advertise server on master server. No error message provided.");
+                Warning("Received error when trying to advertise server on master server. No error message provided.");
                 return false;
             }
         }
@@ -290,7 +290,7 @@ void Server::CancelServerAdvertisement()
     Request->SetUrl(StringFormat("http://%s:%i/api/v1/servers", Config.MasterServerIp.c_str(), Config.MasterServerPort));
     if (!Request->Send())
     {
-        Warning("Recieved error when trying to advertise server on master server. Failed to start request.");
+        Warning("Received error when trying to advertise server on master server. Failed to start request.");
     }
     else
     {
@@ -355,7 +355,7 @@ void Server::PollServerAdvertisement()
         MasterServerUpdateRequest->SetUrl(StringFormat("http://%s:%i/api/v1/servers", Config.MasterServerIp.c_str(), Config.MasterServerPort));
         if (!MasterServerUpdateRequest->SendAsync())
         {
-            Warning("Recieved error when trying to advertise server on master server. Failed to start request.");
+            Warning("Received error when trying to advertise server on master server. Failed to start request.");
             MasterServerUpdateRequest = nullptr;
         }
     }
@@ -367,7 +367,7 @@ void Server::RunUntilQuit()
 
     // We should really do this event driven ...
     // This suffices for now.
-    while (!QuitRecieved)
+    while (!QuitReceived)
     {
         {
             DebugTimerScope Scope(Debug::UpdateTime);
@@ -562,7 +562,7 @@ void Server::PollDiscordNotices()
             DiscordNoticeRequest->SetBody(FormattedBody);
             if (!DiscordNoticeRequest->SendAsync())
             {
-                Warning("Recieved error when trying to send discord notification.");
+                Warning("Received error when trying to send discord notification.");
             }
         }
     }
@@ -572,7 +572,7 @@ void Server::PollDiscordNotices()
         {
             if (!Response->GetWasSuccess())
             {
-                Warning("Recieved error when trying to send discord notification.");
+                Warning("Received error when trying to send discord notification.");
             }
             else
             {

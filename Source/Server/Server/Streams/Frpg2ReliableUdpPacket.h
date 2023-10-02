@@ -67,7 +67,7 @@ std::string ToString(Frpg2ReliableUdpOpCode OpCode);
 enum class Frpg2ReliableUdpStreamState
 {
     Listening,
-    SynRecieved,
+    SynReceived,
     Established,
     Closing,
     Closed,

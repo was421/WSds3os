@@ -17,7 +17,7 @@
 class Server;
 class LoginClient;
 class NetConnection;
-class NetConnectionTCP;
+class NetConnectionWebSocket;
 class RSAKeyPair;
 
 // The login server is the first server the game client attempts to contact.
@@ -51,7 +51,7 @@ protected:
 private:
     Server* ServerInstance;
 
-    std::shared_ptr<NetConnectionTCP> Connection;
+    std::shared_ptr<NetConnection> Connection;
 
     std::vector<std::shared_ptr<LoginClient>> Clients;
 

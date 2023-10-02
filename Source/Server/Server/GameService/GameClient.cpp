@@ -31,7 +31,7 @@ GameClient::GameClient(GameService* OwningService, std::shared_ptr<NetConnection
     , Connection(InConnection)
     , AuthToken(InAuthToken)
 {
-    LastMessageRecievedTime = GetSeconds();
+    LastMessageReceivedTime = GetSeconds();
 
     MessageStream = std::make_shared<Frpg2ReliableUdpMessageStream>(InConnection, CwcKey, AuthToken);
 }
@@ -39,7 +39,7 @@ GameClient::GameClient(GameService* OwningService, std::shared_ptr<NetConnection
 bool GameClient::Poll()
 {
     // Has this client timed out?
-    double TimeSinceLastMessage = GetSeconds() - LastMessageRecievedTime;
+    double TimeSinceLastMessage = GetSeconds() - LastMessageReceivedTime;
     if (TimeSinceLastMessage >= BuildConfig::CLIENT_TIMEOUT)
     {
         WarningS(GetName().c_str(), "Client timed out.");
@@ -74,7 +74,7 @@ bool GameClient::Poll()
 
     // Process all packets.
     Frpg2ReliableUdpMessage Message;
-    while (MessageStream->Recieve(&Message))
+    while (MessageStream->Receive(&Message))
     {
         if (HandleMessage(Message))
         {
@@ -94,7 +94,7 @@ bool GameClient::Poll()
     }
 
     // Update lat recieved time.
-    LastMessageRecievedTime = MessageStream->GetLastActivityTime();
+    LastMessageReceivedTime = MessageStream->GetLastActivityTime();
 
     // Keep authentication token alive while client is..
     Service->RefreshAuthToken(AuthToken);
@@ -109,7 +109,7 @@ bool GameClient::HandleMessage(const Frpg2ReliableUdpMessage& Message)
     const std::vector<std::shared_ptr<GameManager>>& Managers = Service->GetManagers();
     for (auto& Manager : Managers)
     {
-        MessageHandleResult Result = Manager->OnMessageRecieved(this, Message);
+        MessageHandleResult Result = Manager->OnMessageReceived(this, Message);
         if (Result == MessageHandleResult::Error)
         {
             return true;

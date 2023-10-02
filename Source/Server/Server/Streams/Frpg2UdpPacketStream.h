@@ -27,7 +27,7 @@ public:
     bool Send(const Frpg2UdpPacket& Packet);
 
     // Returns true if a packet was recieved and stores packet in OutputPacket.
-    bool Recieve(Frpg2UdpPacket* Packet);
+    bool Receive(Frpg2UdpPacket* Packet);
 
     // Gets the last timestamp where we recieved packets from the remote system, can be used for timeouts etc.
     double GetLastActivityTime() { return LastActivityTime; }
@@ -55,9 +55,9 @@ private:
     
     double LastActivityTime;
 
-    std::vector<Frpg2UdpPacket> RecieveQueue;
+    std::vector<Frpg2UdpPacket> ReceiveQueue;
 
-    std::vector<uint8_t> RecieveBuffer;
+    std::vector<uint8_t> ReceiveBuffer;
 
     std::shared_ptr<Cipher> EncryptionCipher;
     std::shared_ptr<Cipher> DecryptionCipher;

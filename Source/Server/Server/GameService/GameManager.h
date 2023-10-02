@@ -47,7 +47,7 @@ public:
 
     // Called when a game client recieves a message.
     // Returns true if an error occured and the client should be disconnected.
-    virtual MessageHandleResult OnMessageRecieved(GameClient* Client, const Frpg2ReliableUdpMessage& Message) { return MessageHandleResult::Unhandled; }
+    virtual MessageHandleResult OnMessageReceived(GameClient* Client, const Frpg2ReliableUdpMessage& Message) { return MessageHandleResult::Unhandled; }
 
     // Returns a general descriptive name of the manager for logging.
     virtual std::string GetName() = 0;

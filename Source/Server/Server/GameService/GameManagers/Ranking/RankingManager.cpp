@@ -23,7 +23,7 @@ RankingManager::RankingManager(Server* InServerInstance)
 {
 }
 
-MessageHandleResult RankingManager::OnMessageRecieved(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
+MessageHandleResult RankingManager::OnMessageReceived(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
 {
     if (Message.Header.msg_type == Frpg2ReliableUdpMessageType::RequestRegisterRankingData)
     {
