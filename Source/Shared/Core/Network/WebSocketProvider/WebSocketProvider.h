@@ -1,6 +1,5 @@
 #pragma once
 #include <mutex>
-#include <future>
 #include <string>
 #include <unordered_map>
 #include <queue>
@@ -22,7 +21,7 @@ public:
 	void operator=(const WebSocketProvider&) = delete;
 	static WebSocketProvider* GetInstance();
 
-	std::unordered_map<std::string, std::promise<websocketpp::connection_hdl>*> Endpoints;
+	std::unordered_map<std::string, std::queue<websocketpp::connection_hdl>> Endpoints;
 	std::unordered_map<boost::asio::detail::socket_ops::shared_cancel_token_type, std::queue<std::string>> ReceivedMessages;
 	void AddNewEndpoint(std::string);
 	websocketpp::connection_hdl Accept(std::string);
@@ -72,7 +71,7 @@ inline void WebSocketProvider::AddNewEndpoint(std::string name)
 {
 	auto endpoint = this->Endpoints.find(name);
 	if (endpoint == this->Endpoints.end()) {
-		Endpoints[name] = new std::promise<websocketpp::connection_hdl>();
+		Endpoints[name] = {};
 	}
 }
 
@@ -80,17 +79,12 @@ inline websocketpp::connection_hdl WebSocketProvider::Accept(std::string name)
 {
 	auto endpoint = this->Endpoints.find(name);
 	if (endpoint != this->Endpoints.end()) {
-		if (endpoint->second) {
-			auto promice_ptr = endpoint->second;
-			auto future = promice_ptr->get_future();
-			Log("Waiting For Future For: %s", name.c_str());
-			//future.wait();
-			auto hdl = future.get();
-			Log("Got Future For: %s", name.c_str());
-			delete promice_ptr;
-			Endpoints[name] = new std::promise<websocketpp::connection_hdl>();
+		if (endpoint->second.size() > 0) {
+			auto hdl = endpoint->second.front();
+			endpoint->second.pop();
 			return hdl;
 		}
+		
 	}
 	return websocketpp::connection_hdl();
 }
@@ -125,6 +119,7 @@ inline bool WebSocketProvider::Send(websocketpp::connection_hdl hdl, std::vector
 	auto error = con->send(msg.data(), BytesSent, websocketpp::frame::opcode::binary);
 	if (error.value() != 0) {
 		BytesSent = 0;
+		Log("SENT %d", BytesSent);
 		return false;
 	}
 	return true;
@@ -132,7 +127,12 @@ inline bool WebSocketProvider::Send(websocketpp::connection_hdl hdl, std::vector
 
 inline bool WebSocketProvider::Close(websocketpp::connection_hdl hdl)
 {
-	this->server.close(hdl, websocketpp::close::status::going_away, "Closed By Server");
+	auto con = this->server.get_con_from_hdl(hdl);
+	if (con) {
+		if (con->get_state() == websocketpp::session::state::open) {
+			this->server.close(hdl, websocketpp::close::status::going_away, "Closed By Server");
+		}
+	}
 	this->ReceivedMessages.erase(hdl.lock());
 	return true;
 }
@@ -165,12 +165,10 @@ inline void WebSocketProvider::on_open(websocketpp::connection_hdl hdl) {
 			Log("endpoint: %s", result.c_str());
 			auto endpoint = this->Endpoints.find(result);
 			if (endpoint != this->Endpoints.end()) {
-				if (endpoint->second) {
-					endpoint->second->set_value(hdl);
-					Log("Futrue Set For Connection: %s", result.c_str());
-					this->ReceivedMessages[hdl.lock()] = {};
-					return;
-				}
+				endpoint->second.push(hdl);
+				Log("Futrue Set For Connection: %s", result.c_str());
+				this->ReceivedMessages[hdl.lock()] = {};
+				return;
 			}
 		}
 	}

@@ -17,6 +17,12 @@
 
 #include <cstring>
 
+template <typename T>
+bool is_uninitialized(std::weak_ptr<T> const& weak) {
+    using wt = std::weak_ptr<T>;
+    return !weak.owner_before(wt{}) && !wt{}.owner_before(weak);
+}
+
 namespace {
     // Maximum backlog of data in a packet streams send queue. Sending
     // packets beyond this will result in disconnect.
@@ -52,13 +58,16 @@ std::shared_ptr<NetConnection> NetConnectionWebSocket::Accept()
 {
     NetIPAddress addr;
     auto handle = wsp->Accept(this->Name);
-    auto con = wsp->GetServer()->get_con_from_hdl(handle);
-    auto remote = con->get_remote_endpoint();
-    size_t colonPos = remote.find(':');
-    if (colonPos != std::string::npos) {
-        NetIPAddress::ParseString(remote.substr(0, colonPos), addr);
+    if (!is_uninitialized(handle)) {
+        auto con = wsp->GetServer()->get_con_from_hdl(handle);
+        auto remote = con->get_remote_endpoint();
+        size_t colonPos = remote.find(':');
+        if (colonPos != std::string::npos) {
+            NetIPAddress::ParseString(remote.substr(0, colonPos), addr);
+        }
+        return std::make_shared<NetConnectionWebSocket>(handle, remote, addr);
     }
-    return std::make_shared<NetConnectionWebSocket>(handle, remote, addr);
+    return nullptr;
 }
 
 NetIPAddress NetConnectionWebSocket::GetAddress()
@@ -68,6 +77,7 @@ NetIPAddress NetConnectionWebSocket::GetAddress()
 
 bool NetConnectionWebSocket::Connect(std::string Hostname, int Port, bool ForceLastIpEntry)
 {
+    Warning("WebSocket Connect is a TODO");
     return false;
 }
 
@@ -147,20 +157,19 @@ void NetConnectionWebSocket::Rename(const std::string& InName)
 
 bool NetConnectionWebSocket::IsConnected()
 {
-    if (HasDisconnected)
-    {
-        return false;
+    auto con = this->server->get_con_from_hdl(this->Handle);
+    if (con) {
+        if (con->get_state() != websocketpp::session::state::open) {
+            return false;
+        }
+        return true;
     }
-
-    int error_code;
-
-    return (error_code == 0);
+    return false;
 }
 
 bool NetConnectionWebSocket::Pump()
 {
     // Send any data that we are able to.
-    Log("Pump Called for %s", this->Name.c_str())
     while (SendQueue.size() > 0)
     {
         size_t BytesSent = 0;

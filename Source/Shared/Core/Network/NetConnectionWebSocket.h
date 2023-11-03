@@ -52,8 +52,6 @@ private:
     std::string Name;
     NetIPAddress IPAddress;
 
-    bool HasDisconnected = false;
-
     std::vector<uint8_t> SendQueue;
 
     //
