@@ -27,9 +27,6 @@ public:
     // Public key of server being joined.
     std::string ServerPublicKey = "";
 
-    // If we should use seperate saves from the retail ones.
-    bool EnableSeperateSaveFiles = true;
-
 public:
 
     bool Save(const std::filesystem::path& Path);

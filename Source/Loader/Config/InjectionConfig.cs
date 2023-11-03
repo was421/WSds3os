@@ -22,10 +22,9 @@ namespace Loader
     [Serializable]
     public class InjectionConfig
     {
-        public string ServerName            { get; set; }
-        public string ServerHostname        { get; set; }
-        public string ServerPublicKey       { get; set; }
-        public bool EnableSeperateSaveFiles { get; set; }
+        public string ServerName        { get; set; }
+        public string ServerHostname    { get; set; }
+        public string ServerPublicKey   { get; set; }
 
         public string ToJson()
         {

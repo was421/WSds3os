@@ -82,17 +82,5 @@ namespace Loader {
                 this["minimum_players"] = value;
             }
         }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool use_seperate_saves {
-            get {
-                return ((bool)(this["use_seperate_saves"]));
-            }
-            set {
-                this["use_seperate_saves"] = value;
-            }
-        }
     }
 }
