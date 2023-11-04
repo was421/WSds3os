@@ -13,7 +13,7 @@
 #include "Server/Server.h"
 
 #include "Shared/Core/Network/NetConnection.h"
-#include "Shared/Core/Network/NetConnectionWebSocket.h"
+#include "Shared/Core/Network/NetConnectionTCP.h"
 #include "Shared/Core/Utils/Logging.h"
 #include "Shared/Core/Utils/DebugObjects.h"
 
@@ -32,7 +32,7 @@ AuthService::~AuthService()
 
 bool AuthService::Init()
 {
-    Connection = std::make_shared<NetConnectionWebSocket>("AuthService");
+    Connection = std::make_shared<NetConnectionTCP>("Auth Service");
     int Port = ServerInstance->GetConfig().AuthServerPort;
     if (!Connection->Listen(Port))
     {
@@ -90,4 +90,3 @@ std::string AuthService::GetName()
 {
     return "Auth";
 }
-

@@ -17,7 +17,7 @@
 class Server;
 class LoginClient;
 class NetConnection;
-class NetConnectionWebSocket;
+class NetConnectionTCP;
 class RSAKeyPair;
 
 // The login server is the first server the game client attempts to contact.
@@ -29,7 +29,7 @@ class RSAKeyPair;
 // into an TEA encrypted block in the game exe. This block is what the loader 
 // patches to make the game communicate with different servers.
 
-class LoginService 
+class LoginService
     : public Service
 {
 public:
@@ -51,7 +51,7 @@ protected:
 private:
     Server* ServerInstance;
 
-    std::shared_ptr<NetConnection> Connection;
+    std::shared_ptr<NetConnectionTCP> Connection;
 
     std::vector<std::shared_ptr<LoginClient>> Clients;
 

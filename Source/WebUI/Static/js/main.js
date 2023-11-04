@@ -666,7 +666,7 @@ function createNewAnnouncementBlock(where)
     var announcementHeader = document.createElement('div');
     announcementHeader.classList.add.apply(announcementHeader.classList, classes);
     announcementHeader.innerHTML = `
-    <input class="mdl-textfield__input" type="text" id="announcement-${index}-header">
+    <textarea class="mdl-textfield__input" rows="2" id="announcement-${index}-header"></textarea>
     <label class="mdl-textfield__label" for="announcement-${index}-header">Announcement Header</label>
     `;
     nab.appendChild(announcementHeader);
@@ -674,7 +674,7 @@ function createNewAnnouncementBlock(where)
     var announcementBody = document.createElement('div');
     announcementBody.classList.add.apply(announcementBody.classList, classes);
     announcementBody.innerHTML = `
-    <textarea  class="mdl-textfield__input" rows="5" cols="80" id="announcement-${index}-body"></textarea>
+    <textarea  class="mdl-textfield__input" rows="10" cols="80" id="announcement-${index}-body"></textarea>
     <label class="mdl-textfield__label" for="announcement-${index}-body">Announcement Body</label>
     `;
     nab.appendChild(announcementBody);

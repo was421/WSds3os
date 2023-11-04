@@ -29,7 +29,7 @@
 #include "Server/Streams/Frpg2ReliableUdpMessageStream.h"
 
 #include "Shared/Core/Network/NetConnection.h"
-#include "Shared/Core/Network/NetConnectionWebSocket.h"
+#include "Shared/Core/Network/NetConnectionUDP.h"
 #include "Shared/Core/Utils/Logging.h"
 #include "Shared/Core/Utils/Strings.h"
 #include "Shared/Core/Utils/DebugObjects.h"
@@ -67,7 +67,7 @@ GameService::~GameService()
 
 bool GameService::Init()
 {
-    Connection = std::make_shared<NetConnectionWebSocket>("GameService");
+    Connection = std::make_shared<NetConnectionUDP>("Game Service");
     int Port = ServerInstance->GetConfig().GameServerPort;
     if (!Connection->Listen(Port))
     {
@@ -165,7 +165,7 @@ void GameService::Poll()
             iter++;
         }
     }
-    
+
     for (auto iter = DisconnectingClients.begin(); iter != DisconnectingClients.end(); /* empty */)
     {
         std::shared_ptr<GameClient> Client = *iter;
@@ -206,11 +206,11 @@ void GameService::Poll()
 void GameService::HandleClientConnection(std::shared_ptr<NetConnection> ClientConnection)
 {
     uint64_t AuthToken;
-    int BytesReceived = 0;
+    int BytesRecieved = 0;
 
     std::vector<uint8_t> Buffer;
     Buffer.resize(sizeof(uint64_t));
-    if (!ClientConnection->Peek(Buffer, 0, sizeof(AuthToken), BytesReceived) || BytesReceived != sizeof(AuthToken))
+    if (!ClientConnection->Peek(Buffer, 0, sizeof(AuthToken), BytesRecieved) || BytesRecieved != sizeof(AuthToken))
     {
         LogS(ClientConnection->GetName().c_str(), "Failed to peek authentication token, or not enough data available. Ignoring connection.");
         return;

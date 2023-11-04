@@ -21,7 +21,7 @@ class Server;
 class GameClient;
 class GameManager;
 class NetConnection;
-class NetConnectionWebSocket;
+class NetConnectionUDP;
 class RSAKeyPair;
 class Cipher;
 
@@ -39,7 +39,7 @@ struct GameClientAuthenticationState
 // The game server is responsible for responding to any requests that game clients make. 
 // Its connected to after the user has visited the login server and the authentication server.
 
-class GameService 
+class GameService
     : public Service
 {
 public:
@@ -78,7 +78,7 @@ public:
     // Be very careful using this, we manipulate steam-ids in debug to allow multiple 
     // instance of the same player to be active in the game. Use FindClientByPlayerId instead.
     std::shared_ptr<GameClient> FindClientBySteamId(const std::string& SteamId);
-    
+
     std::vector<std::shared_ptr<GameClient>> FindClients(std::function<bool(const std::shared_ptr<GameClient>&)> Predicate);
     std::vector<std::shared_ptr<GameClient>> GetClients() { return Clients; }
 
@@ -91,7 +91,7 @@ protected:
 private:
     Server* ServerInstance;
 
-    std::shared_ptr<NetConnection> Connection;
+    std::shared_ptr<NetConnectionUDP> Connection;
 
     std::vector<std::shared_ptr<GameClient>> Clients;
     std::vector<std::shared_ptr<GameClient>> DisconnectingClients;
