@@ -55,6 +55,15 @@ bool SettingsHandler::handleGet(CivetServer* Server, struct mg_connection* Conne
     json["disableSoulLevelMatching"] = IsSoulLevelMatchingDisabled();
     json["ignoreInvasionAreaFilter"] = Config.IgnoreInvasionAreaFilter;
     json["antiCheatEnabled"] = Config.AntiCheatEnabled;
+
+    nlohmann::json announcementsJson;
+    for (const auto& Announcement : Config.Announcements) {
+        nlohmann::json jsonObj;
+        jsonObj["header"] = Announcement.Header;
+        jsonObj["body"] = Announcement.Body;
+        announcementsJson.push_back(jsonObj);
+    }
+    json["announcements"] = announcementsJson;
     
     RespondJson(Connection, json);
 
@@ -160,6 +169,22 @@ bool SettingsHandler::handlePost(CivetServer* Server, struct mg_connection* Conn
             Config.MoundMakerInvasionMatchingParameters.DisableLevelMatching = json["disableSoulLevelMatching"];
             Config.CovenantInvasionMatchingParameters.DisableLevelMatching = json["disableSoulLevelMatching"];
             Config.UndeadMatchMatchingParameters.DisableLevelMatching = json["disableSoulLevelMatching"];
+        }
+    }
+    if (json.contains("announcements"))
+    {
+        if (json["announcements"].is_array())
+        {
+            Config.Announcements.clear();
+            for (const auto& announcement : json["announcements"])
+            {
+                Config.Announcements.push_back(
+                    {
+                        std::string(announcement.contains("header") ? announcement["header"] : ""),
+                        std::string(announcement.contains("body") ? announcement["body"] : "")
+                    }
+                );
+            }
         }
     }
 
