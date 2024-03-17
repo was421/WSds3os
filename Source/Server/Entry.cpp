@@ -7,11 +7,18 @@
  * If not, see <https://opensource.org/licenses/MIT>.
  */
 
-#include "Server/Server.h"
+#include "Server/ServerManager.h"
 #include "Client/Client.h"
 #include "Config/BuildConfig.h"
 #include "Shared/Core/Utils/Logging.h"
 #include "Shared/Platform/Platform.h"
+
+// DEBUG DEBUG DEBUG
+#include "Shared/Core/Utils/Protobuf.h"
+#include "Shared/Core/Utils/File.h"
+#include "Shared/Core/Utils/Strings.h"
+//#define DEBUG_TEST
+// DEBUG DEBUG DEBUG
 
 #include <filesystem>
 #include <thread>
@@ -24,6 +31,41 @@ extern "C" void __cdecl SteamWarningHook(int nSeverity, const char* pchDebugText
     LogS("Steam", "%i: %s", nSeverity, pchDebugText);
 }
 
+#ifdef DEBUG_TEST
+#pragma optimize("", off)
+void DebugTest()
+{
+    DecodedProtobufRegistry registry;
+
+    for (const auto& entry : std::filesystem::directory_iterator("Z:/ds3os/Temp/ProtobufDump"))
+    {
+        if (entry.is_regular_file())
+        {
+            std::filesystem::path path = entry.path();
+
+            std::vector<uint8_t> bytes;
+            if (!ReadBytesFromFile(path, bytes))
+            {
+                break;
+            }
+
+            std::string className = path.stem().string().c_str();
+            if (size_t pos = className.find("_"); pos != std::string::npos)
+            {
+                className = className.substr(pos + 1);
+            }
+
+            registry.Decode(className, bytes.data(), bytes.size());
+        }        
+    }
+
+    std::string result = registry.ToString();
+    Log("%s", result.c_str());
+
+    Log("Loaded protobuf registry.");
+}
+#endif
+
 int main(int argc, char* argv[])
 {
     bool start_as_client_emulator = false;
@@ -35,11 +77,11 @@ int main(int argc, char* argv[])
     std::filesystem::path exe_directory = std::filesystem::path(argv[0]).parent_path();
     std::filesystem::current_path(exe_directory);
 
-    Log(R"--(    ____             __      _____             __        _____)--");
-    Log(R"--(   / __ \____ ______/ /__   / ___/____  __  __/ /____   |__  /)--");
-    Log(R"--(  / / / / __ `/ ___/ //_/   \__ \/ __ \/ / / / / ___/    /_ < )--");
-    Log(R"--( / /_/ / /_/ / /  / ,<     ___/ / /_/ / /_/ / (__  )   ___/ / )--");
-    Log(R"--(/_____/\__,_/_/  /_/|_|   /____/\____/\__,_/_/____/   /____/  )--");
+    Log(R"--(    ____             __      _____             __    )--");
+    Log(R"--(   / __ \____ ______/ /__   / ___/____  __  __/ /____)--");
+    Log(R"--(  / / / / __ `/ ___/ //_/   \__ \/ __ \/ / / / / ___/)--");
+    Log(R"--( / /_/ / /_/ / /  / ,<     ___/ / /_/ / /_/ / (__  ) )--");
+    Log(R"--(/_____/\__,_/_/  /_/|_|   /____/\____/\__,_/_/____/  )--");
     Log(R"--(  / __ \____  ___  ____     / ___/___  ______   _____  _____  )--");
     Log(R"--( / / / / __ \/ _ \/ __ \    \__ \/ _ \/ ___/ | / / _ \/ ___/  )--");
     Log(R"--(/ /_/ / /_/ /  __/ / / /   ___/ /  __/ /   | |/ /  __/ /      )--");
@@ -48,6 +90,10 @@ int main(int argc, char* argv[])
     Log("");
     Log("https://github.com/tleonarduk/ds3os");
     Log("");
+
+#ifdef DEBUG_TEST
+    DebugTest();
+#endif
 
     if (!PlatformInit())
     {
@@ -64,17 +110,6 @@ int main(int argc, char* argv[])
         }
 
         SteamUtils()->SetWarningMessageHook(&SteamWarningHook);
-    }
-    else
-    {
-        // Ports etc are irrelevant, we're only using the api to do authentication. 
-        if (!SteamGameServer_Init(0, 50001, 50002, eServerModeAuthentication, "1.0.0.0"))
-        {
-            Error("Failed to initialize steam game server api.");
-            return 1;
-        }
-
-        SteamGameServerUtils()->SetWarningMessageHook(&SteamWarningHook);
     }
 
     // TODO: Split this out into a seperate application.
@@ -113,14 +148,14 @@ int main(int argc, char* argv[])
     }
     else
     {
-        Server ServerInstance; 
-        if (!ServerInstance.Init())
+        ServerManager ServerManagerInstance;
+        if (!ServerManagerInstance.Init())
         {
             Error("Server failed to initialize.");
             return 1;
         }
-        ServerInstance.RunUntilQuit();
-        if (!ServerInstance.Term())
+        ServerManagerInstance.RunUntilQuit();
+        if (!ServerManagerInstance.Term())
         {
             Error("Server failed to terminate.");
             return 1;
@@ -130,10 +165,6 @@ int main(int argc, char* argv[])
     if (start_as_client_emulator)
     {
         SteamAPI_Shutdown();
-    }
-    else
-    {
-        SteamGameServer_Shutdown();
     }
 
     if (!PlatformTerm())

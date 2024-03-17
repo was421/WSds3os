@@ -27,6 +27,15 @@ public:
     // Public key of server being joined.
     std::string ServerPublicKey = "";
 
+    // Type of game we are being injected into.
+    std::string ServerGameType = "";
+
+    // Login port to connect to on server.
+    int ServerPort = 50050;
+
+    // If we should use seperate saves from the retail ones.
+    bool EnableSeperateSaveFiles = true;
+
 public:
 
     bool Save(const std::filesystem::path& Path);

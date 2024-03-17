@@ -10,10 +10,11 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <unordered_map>
+#include <map>
 
-#include "Protobuf/Protobufs.h"
-
-#include "Server/GameService/Utils/GameIds.h"
+#include "Shared/Platform/Platform.h"
 
 // Represents the in-game state of a player. Each game client owns an instance of this class.
 
@@ -70,9 +71,6 @@ public:
     // until the first RequestUpdatePlayerStatus is invoked.
     DEFINE_FIELD(std::string, CharacterName, "")    
     
-    // Current online matching area the player is in.
-    DEFINE_FIELD(OnlineAreaId, CurrentArea, OnlineAreaId::None)
-    
     // If the player is currently in a state they can be invaded in.
     DEFINE_FIELD(bool, IsInvadable, false)
     
@@ -81,20 +79,31 @@ public:
     
     // Players maximum weapon level. 
     DEFINE_FIELD(int, MaxWeaponLevel, 0)
-    
-    // What type of visitor the player can currently be summoned as.
-    DEFINE_FIELD(Frpg2RequestMessage::VisitorPool, VisitorPool, Frpg2RequestMessage::VisitorPool::VisitorPool_None)
-    
-    // Information the player sends and periodically patches with 
-    // RequestUpdatePlayerStatus requests.
-    DEFINE_FIELD(Frpg2PlayerData::AllStatus, PlayerStatus, Frpg2PlayerData::AllStatus())
-
+        
     // Current anti-cheat penalty score.
     DEFINE_FIELD(PlayerAntiCheatState, AntiCheatState, {});
 
     // Bonfire info used for calculating deltas on when the user lights one.
     DEFINE_FIELD(std::vector<uint32_t>, LitBonfires, {});
     DEFINE_FIELD(bool, HasInitialState, false);
+
+    // Gets a game specific opaque identifier for the area the player is in.
+    virtual uint32_t GetCurrentAreaId() = 0;
+
+    // Returns true when the player is fully logged in and in-game.
+    virtual bool IsInGame() = 0;
+
+    // Various bits of player information.
+    virtual size_t GetSoulCount() = 0;
+    virtual size_t GetSoulMemory() = 0;
+    virtual size_t GetDeathCount() = 0;
+    virtual size_t GetMultiplayerSessionCount() = 0;
+    virtual double GetPlayTime() = 0;
+
+    // Textural descriptions of the players status/covenant status, shown in the web-interface.
+    virtual std::string GetConvenantStatusDescription() = 0;
+    virtual std::string GetStatusDescription() = 0;
+
 };
 
 #undef DEFINE_FIELD

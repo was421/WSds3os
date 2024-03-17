@@ -22,7 +22,7 @@
 #include "Config/BuildConfig.h"
 #include "Config/RuntimeConfig.h"
 
-#include "Protobuf/Protobufs.h"
+#include "Protobuf/SharedProtobufs.h"
 
 LoginClient::LoginClient(LoginService* OwningService, std::shared_ptr<NetConnection> InConnection, RSAKeyPair* InServerRSAKey)
     : Service(OwningService)
@@ -73,7 +73,7 @@ bool LoginClient::Poll()
 
         // Login server only accepts RequestQueryLoginServerInfo messages. 
         // Nice and straight forward!
-        Frpg2RequestMessage::RequestQueryLoginServerInfo Request;
+        Shared_Frpg2RequestMessage::RequestQueryLoginServerInfo Request;
         if (!Request.ParseFromArray(Message.Payload.data(), (int)Message.Payload.size()))
         {
             WarningS(GetName().c_str(), "Disconnecting client as recieved message that could not be parsed into expected format.");
@@ -91,7 +91,7 @@ bool LoginClient::Poll()
             LogS(GetName().c_str(), "Directing login client to our private ip (%s) as appears to be on private subnet.", ServerIP.c_str());
         }
 
-        Frpg2RequestMessage::RequestQueryLoginServerInfoResponse Response;
+        Shared_Frpg2RequestMessage::RequestQueryLoginServerInfoResponse Response;
         Response.set_server_ip(ServerIP);
         Response.set_port(Config.AuthServerPort);
 

@@ -15,11 +15,16 @@ SET(SOURCES
     Config/RuntimeConfig.h
     Config/RuntimeConfig.cpp
 
-    Protobuf/FpdLogMessage.cc
-    Protobuf/Frpg2PlayerData.cc
-    Protobuf/Frpg2RequestMessage.cc
-    Protobuf/Protobufs.h
+    Protobuf/Generated/Shared_FpdLogMessage.pb.cc
+    Protobuf/Generated/Shared_Frpg2PlayerData.pb.cc
+    Protobuf/Generated/Shared_Frpg2RequestMessage.pb.cc
     
+    Protobuf/SharedProtobufs.h
+        
+    Server/Game.cpp
+    Server/Game.h
+    Server/ServerManager.cpp
+    Server/ServerManager.h
     Server/Server.cpp
     Server/Server.h
     Server/Service.h
@@ -36,65 +41,8 @@ SET(SOURCES
     Server/GameService/GameService.cpp
     Server/GameService/GameService.h
     Server/GameService/PlayerState.h
-    Server/GameService/GameManagers/BloodMessage/BloodMessageManager.cpp
-    Server/GameService/GameManagers/BloodMessage/BloodMessageManager.h
-    Server/GameService/GameManagers/Bloodstain/BloodstainManager.cpp
-    Server/GameService/GameManagers/Bloodstain/BloodstainManager.h
-    Server/GameService/GameManagers/Boot/BootManager.cpp
-    Server/GameService/GameManagers/Boot/BootManager.h
-    Server/GameService/GameManagers/BreakIn/BreakInManager.cpp
-    Server/GameService/GameManagers/BreakIn/BreakInManager.h
-    Server/GameService/GameManagers/Ghosts/GhostManager.cpp
-    Server/GameService/GameManagers/Ghosts/GhostManager.h
-    Server/GameService/GameManagers/Logging/LoggingManager.cpp
-    Server/GameService/GameManagers/Logging/LoggingManager.h
-    Server/GameService/GameManagers/Mark/MarkManager.cpp
-    Server/GameService/GameManagers/Mark/MarkManager.h
-    Server/GameService/GameManagers/Misc/MiscManager.cpp
-    Server/GameService/GameManagers/Misc/MiscManager.h
-    Server/GameService/GameManagers/PlayerData/PlayerDataManager.cpp
-    Server/GameService/GameManagers/PlayerData/PlayerDataManager.h
-    Server/GameService/GameManagers/QuickMatch/QuickMatchManager.cpp
-    Server/GameService/GameManagers/QuickMatch/QuickMatchManager.h
-    Server/GameService/GameManagers/Ranking/RankingManager.cpp
-    Server/GameService/GameManagers/Ranking/RankingManager.h
-    Server/GameService/GameManagers/Signs/SignManager.cpp
-    Server/GameService/GameManagers/Signs/SignManager.h
-    Server/GameService/GameManagers/Visitor/VisitorManager.cpp
-    Server/GameService/GameManagers/Visitor/VisitorManager.h
-    Server/GameService/GameManagers/AntiCheat/AntiCheatManager.cpp
-    Server/GameService/GameManagers/AntiCheat/AntiCheatManager.h
-    Server/GameService/GameManagers/AntiCheat/AntiCheatTrigger.cpp
-    Server/GameService/GameManagers/AntiCheat/AntiCheatTrigger.h
-    Server/GameService/GameManagers/AntiCheat/Triggers/AntiCheatTrigger_ClientFlagged.cpp
-    Server/GameService/GameManagers/AntiCheat/Triggers/AntiCheatTrigger_ClientFlagged.h
-    Server/GameService/GameManagers/AntiCheat/Triggers/AntiCheatTrigger_Exploit.cpp
-    Server/GameService/GameManagers/AntiCheat/Triggers/AntiCheatTrigger_Exploit.h
-    Server/GameService/GameManagers/AntiCheat/Triggers/AntiCheatTrigger_ImpossibleStats.cpp
-    Server/GameService/GameManagers/AntiCheat/Triggers/AntiCheatTrigger_ImpossibleStats.h
-    Server/GameService/GameManagers/AntiCheat/Triggers/AntiCheatTrigger_InvalidName.cpp
-    Server/GameService/GameManagers/AntiCheat/Triggers/AntiCheatTrigger_InvalidName.h
-    Server/GameService/Utils/GameIds.h
-    Server/GameService/Utils/NRSSRSanitizer.h
     Server/GameService/Utils/OnlineAreaPool.h
-    Server/GameService/Utils/Ids/BonfireId.inc
-    Server/GameService/Utils/Ids/CharacterTypeId.inc
-    Server/GameService/Utils/Ids/ConvenantId.h
-    Server/GameService/Utils/Ids/CovenantId.h
-    Server/GameService/Utils/Ids/CovenantId.inc
-    Server/GameService/Utils/Ids/GestureId.inc
-    Server/GameService/Utils/Ids/InvasionTypeId.inc
-    Server/GameService/Utils/Ids/ItemId.h
-    Server/GameService/Utils/Ids/ItemId.inc
-    Server/GameService/Utils/Ids/OnlineAreaId.inc
-    Server/GameService/Utils/Ids/TeamTypeId.inc
-    Server/GameService/Utils/Ids/BossId.inc    
-    Server/GameService/Utils/Ids/BloodMessageConjunction.inc
-    Server/GameService/Utils/Ids/BloodMessageGesture.inc
-    Server/GameService/Utils/Ids/BloodMessageTemplate.inc
-    Server/GameService/Utils/Ids/BloodMessageWord.inc    
-    Server/GameService/Utils/Data/BloodMessageData.h
-    Server/GameService/Utils/Data/BloodMessageData.cpp
+
     Server/LoginService/LoginClient.cpp
     Server/LoginService/LoginClient.h
     Server/LoginService/LoginService.cpp
@@ -112,11 +60,11 @@ SET(SOURCES
     Server/Streams/Frpg2ReliableUdpMessage.h
     Server/Streams/Frpg2ReliableUdpMessageStream.cpp
     Server/Streams/Frpg2ReliableUdpMessageStream.h
-    Server/Streams/Frpg2ReliableUdpMessageTypes.inc
     Server/Streams/Frpg2ReliableUdpPacket.cpp
     Server/Streams/Frpg2ReliableUdpPacket.h
     Server/Streams/Frpg2ReliableUdpPacketStream.cpp
     Server/Streams/Frpg2ReliableUdpPacketStream.h
+    
     Server/Streams/Frpg2UdpPacket.h
     Server/Streams/Frpg2UdpPacketStream.cpp
     Server/Streams/Frpg2UdpPacketStream.h
@@ -137,18 +85,25 @@ SET(SOURCES
     Server/WebUIService/Handlers/SettingsHandler.h
     Server/WebUIService/Handlers/StatisticsHandler.cpp
     Server/WebUIService/Handlers/StatisticsHandler.h
+    Server/WebUIService/Handlers/ShardingHandler.cpp
+    Server/WebUIService/Handlers/ShardingHandler.h
     Server/WebUIService/Handlers/WebUIHandler.cpp
     Server/WebUIService/Handlers/WebUIHandler.h
 )
  
 add_executable(${PROJECT_NAME} ${SOURCES} ${PLATFORM_SOURCES})
 
-target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/../")
+target_include_directories(${PROJECT_NAME} PUBLIC 
+    "${CMAKE_CURRENT_SOURCE_DIR}" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/../"
+)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE -D_CRT_SECURE_NO_WARNINGS -D_WINSOCK_DEPRECATED_NO_WARNINGS -D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
 
 target_link_libraries(
     ${PROJECT_NAME}
+    DarkSouls3
+    DarkSouls2
     Shared
     civetweb
     libprotobuf-lite
@@ -161,7 +116,8 @@ foreach(config ${CMAKE_CONFIGURATION_TYPES})
     string(TOUPPER ${config} config_upper)
     
     # Write steam appid file, required for dedicated servers.
-    file(WRITE "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config_upper}}/steam_appid.txt" "374320")
+    # Server writes this out automatically now.
+    #file(WRITE "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config_upper}}/steam_appid.txt" "374320")
 
     # Copy WebUI resources to output folder
     file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/../WebUI" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config_upper}}")

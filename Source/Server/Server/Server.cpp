@@ -8,6 +8,7 @@
  */
 
 #include "Server/Server.h"
+#include "Server/ServerManager.h"
 #include "Server/Config/BuildConfig.h"
 #include "Server/Database/ServerDatabase.h"
 #include "Server/Service.h"
@@ -33,21 +34,31 @@
 #include <openssl/pem.h>
 #include <openssl/err.h>
 
-Server::Server()
+#include <steam/steam_api.h>
+#include <steam/steam_gameserver.h>
+
+Server::Server(const std::string& InServerId, const std::string& InServerName, const std::string& InServerPassword, GameType InType, ServerManager* InManager)
+    : ServerId(InServerId)
+    , Manager(InManager)
+    , DefaultServerName(InServerName)
+    , DefaultServerPassword(InServerPassword)
+    , DefaultServerGameType(InType)
 {
-    // TODO: Move this stuff into a RuntimeConfig type class.
-    SavedPath = std::filesystem::current_path() / std::filesystem::path("Saved");
-    PrivateKeyPath = SavedPath / std::filesystem::path("private.key");
-    PublicKeyPath = SavedPath / std::filesystem::path("public.key");
-    Ds3osconfigPath = SavedPath / std::filesystem::path("server.ds3osconfig");
+    // The keys are always shared between all servers so we can use the same login/auth servers.
+//    std::filesystem::path BasePath = std::filesystem::current_path() / std::filesystem::path("Saved");
+//    PrivateKeyPath = BasePath / std::filesystem::path("private.key");
+//    PublicKeyPath = BasePath / std::filesystem::path("public.key");
+
+    SavedPath = std::filesystem::current_path() / std::filesystem::path("Saved") / InServerId;
+    if constexpr (BuildConfig::SUPPORT_LEGACY_IMPORT_FILES)
+    {
+        Ds3osconfigPath = SavedPath / std::filesystem::path("server.ds3osconfig");
+    }
     ConfigPath = SavedPath / std::filesystem::path("config.json");
     DatabasePath = SavedPath / std::filesystem::path("database.sqlite");
-
-    // Register for Ctrl+C notifications, its the only way the server shuts down right now.
-    CtrlSignalHandle = PlatformEvents::OnCtrlSignal.Register([=]() {
-        Warning("Quit signal recieved, starting shutdown.");        
-        QuitReceived = true;
-    });
+    KeepAliveFilePath = SavedPath / std::filesystem::path("last_activity.time");
+    PrivateKeyPath = SavedPath / std::filesystem::path("private.key");
+    PublicKeyPath = SavedPath / std::filesystem::path("public.key");
 
     // Register all services we want to run.
     Services.push_back(std::make_shared<LoginService>(this, &PrimaryKeyPair));
@@ -58,7 +69,6 @@ Server::Server()
 
 Server::~Server()
 {
-    CtrlSignalHandle.reset();
 }
 
 bool Server::Init()
@@ -76,6 +86,8 @@ bool Server::Init()
     }
 
     // Load configuration if it exists.
+    bool IsNewServer = false;
+    
     if (std::filesystem::exists(ConfigPath))
     {
         if (!Config.Load(ConfigPath))
@@ -86,6 +98,16 @@ bool Server::Init()
     }
     else
     {
+        // If not default server then generating some unique webui credentials.
+        if (!IsDefaultServer())
+        {
+            Config.WebUIServerPassword = RandomPassword();
+            Config.WebUIServerUsername = RandomName();
+            Config.ServerName = DefaultServerName;
+            Config.Password = DefaultServerPassword;
+            Config.GameType = GameTypeStrings[(int)DefaultServerGameType];
+        }
+
         if (!Config.Save(ConfigPath))
         {
             Error("Failed to save configuration file: %s", ConfigPath.string().c_str());
@@ -93,10 +115,87 @@ bool Server::Init()
         }
     }
 
+    // Disable all but error messages if configured.
+    if (Config.QuietLogging)
+    {
+        SetQuietLogging(true);
+    }
+
+    // Determine game type.
+    if (!ParseGameType(Config.GameType.c_str(), ServerGameType))
+    {
+        Error("Unknown game type: %s", Config.GameType.c_str());
+        return false;
+    }
+
+    // Setup steam for this server.
+    if (IsDefaultServer())
+    {
+        std::filesystem::path appid_path = std::filesystem::current_path() / "steam_appid.txt";
+
+        size_t appid = BuildConfig::GameConfig[(int)ServerGameType].STEAM_APPID;
+        WriteTextToFile(appid_path, std::to_string(appid));
+
+        Log("Initializing steam game server api.");
+
+        if (!SteamGameServer_Init(0, Config.LoginServerPort, MASTERSERVERUPDATERPORT_USEGAMESOCKETSHARE, eServerModeAuthentication, "1.0.0.0"))
+        {
+            Error("Failed to initialize steam game server api.");
+            return false;
+        }
+
+        Log("Initialized steam game server api.");
+    }
+
+    // Create game interface for this server.
+    switch (ServerGameType)
+    {
+        case GameType::DarkSouls2:
+        {
+            GameInterface = std::make_unique<DS2_Game>();
+            break;
+        }
+        case GameType::DarkSouls3:
+        {
+            GameInterface = std::make_unique<DS3_Game>();
+            break;
+        }
+        default:
+        {
+            assert(false);
+            return false;
+        }
+    }
+
     // Patch old server ip.
+#ifdef _DEBUG
+    //Config.MasterServerIp = "127.0.0.1";
+    Config.MasterServerIp = "ds3os-master.timleonard.uk";
+    Config.ServerName = "Debugging Server";
+    Config.ServerDescription = "Used for debugging by Infini, don't use.";
+#else
     if (Config.MasterServerIp == "timleonard.uk")
     {
         Config.MasterServerIp = "ds3os-master.timleonard.uk";
+    }
+#endif
+
+    // If not the default server we grab a random free port for the game server.
+    if (!IsDefaultServer())
+    {
+        Log("Selecting floating game ports.");
+        Config.GameServerPort = Manager->GetFreeGamePort();
+        Config.WebUIServerPort = Manager->GetFreeGamePort();
+        Config.AuthServerPort = Manager->GetFreeGamePort();
+        Config.LoginServerPort = Manager->GetFreeGamePort();
+    }
+
+    // Create a server id if one isn't specified already.
+    if (Config.ServerId.empty())
+    {
+        Log("Generating new server id.");
+        Config.ServerId = MakeGUID();
+        SaveConfig();
     }
 
     // Generate server encryption keypair if it doesn't already exists.
@@ -168,21 +267,24 @@ bool Server::Init()
     Log("Public ip address: %s", PublicIP.ToString().c_str());
     Log("Private ip address: %s", PrivateIP.ToString().c_str());
 
-    // Write out the server import file with the latest configuration.
-    nlohmann::json Output;
-    Output["Name"]              = Config.ServerName;
-    Output["Description"]       = Config.ServerDescription;
-    Output["Hostname"]          = Config.ServerHostname.length() > 0 ? Config.ServerHostname : PublicIP.ToString();
-    Output["PrivateHostname"]   = Config.ServerPrivateHostname.length() > 0 ? Config.ServerPrivateHostname : PrivateIP.ToString();
-    Output["PublicKey"]         = PrimaryKeyPair.GetPublicString();
-    Output["ModsWhitelist"]     = Config.ModsWhitelist;
-    Output["ModsBlacklist"]     = Config.ModsBlacklist;
-    Output["ModsRequiredList"]  = Config.ModsRequiredList;
-
-    if (!WriteTextToFile(Ds3osconfigPath, Output.dump(4)))
+    if constexpr (BuildConfig::SUPPORT_LEGACY_IMPORT_FILES)
     {
-        Error("Failed to write ds3osconfig file to: %s", Ds3osconfigPath.string().c_str());
-        return false;
+        // Write out the server import file with the latest configuration.
+        nlohmann::json Output;
+        Output["Name"]              = Config.ServerName;
+        Output["Description"]       = Config.ServerDescription;
+        Output["Hostname"]          = Config.ServerHostname.length() > 0 ? Config.ServerHostname : PublicIP.ToString();
+        Output["PrivateHostname"]   = Config.ServerPrivateHostname.length() > 0 ? Config.ServerPrivateHostname : PrivateIP.ToString();
+        Output["PublicKey"]         = PrimaryKeyPair.GetPublicString();
+        Output["ModsWhitelist"]     = Config.ModsWhitelist;
+        Output["ModsBlacklist"]     = Config.ModsBlacklist;
+        Output["ModsRequiredList"]  = Config.ModsRequiredList;
+
+        if (!WriteTextToFile(Ds3osconfigPath, Output.dump(4)))
+        {
+            Error("Failed to write ds3osconfig file to: %s", Ds3osconfigPath.string().c_str());
+            return false;
+        }
     }
 
     // Open connection to our database.
@@ -202,7 +304,7 @@ bool Server::Init()
         }
     }
     
-#define WriteState(State, bEnabled) WriteLog(bEnabled ? ConsoleColor::Green : ConsoleColor::Red, "", "Log", "%-25s: %s", State, bEnabled ? "Enabled" : "Disabled");
+#define WriteState(State, bEnabled) WriteLog(false, bEnabled ? ConsoleColor::Green : ConsoleColor::Red, "", "Log", "%-25s: %s", State, bEnabled ? "Enabled" : "Disabled");
     WriteState("Blood Messages", !Config.DisableBloodMessages);
     WriteState("Blood Stains", !Config.DisableBloodStains);
     WriteState("Blood Ghosts", !Config.DisableGhosts);
@@ -236,6 +338,11 @@ bool Server::Term()
         return false;
     }
 
+    if (IsDefaultServer())
+    {
+        SteamGameServer_Shutdown();
+    }
+
     return true;
 }
 
@@ -249,7 +356,7 @@ bool Server::ParseServerAdvertisementResponse(std::shared_ptr<NetHttpResponse> R
         json = nlohmann::json::parse(JsonResponse);
         if (!json.contains("status"))
         {
-            Warning("Received error when trying to advertise server on master server. Malformed output.");
+            Warning("Recieved error when trying to advertise server on master server. Malformed output.");
             return false;
         }
         else if (json["status"] != "success")
@@ -257,12 +364,12 @@ bool Server::ParseServerAdvertisementResponse(std::shared_ptr<NetHttpResponse> R
             if (json.contains("message"))
             {
                 std::string message = json["message"];
-                Warning("Received error when trying to advertise server on master server. Error message: %s", message.c_str());
+                Warning("Recieved error when trying to advertise server on master server. Error message: %s", message.c_str());
                 return false;
             }
             else
             {
-                Warning("Received error when trying to advertise server on master server. No error message provided.");
+                Warning("Recieved error when trying to advertise server on master server. No error message provided.");
                 return false;
             }
         }
@@ -290,7 +397,7 @@ void Server::CancelServerAdvertisement()
     Request->SetUrl(StringFormat("http://%s:%i/api/v1/servers", Config.MasterServerIp.c_str(), Config.MasterServerPort));
     if (!Request->Send())
     {
-        Warning("Received error when trying to advertise server on master server. Failed to start request.");
+        Warning("Recieved error when trying to advertise server on master server. Failed to start request.");
     }
     else
     {
@@ -337,6 +444,7 @@ void Server::PollServerAdvertisement()
     else if (GetSeconds() - LastMasterServerUpdate > Config.AdvertiseHearbeatTime)
     {
         nlohmann::json Body;
+        Body["ServerId"] = Config.ServerId;
         Body["Hostname"] = Config.ServerHostname.length() > 0 ? Config.ServerHostname : PublicIP.ToString();
         Body["PrivateHostname"] = Config.ServerPrivateHostname.length() > 0 ? Config.ServerPrivateHostname : PrivateIP.ToString();
         Body["Description"] = Config.ServerDescription;
@@ -348,6 +456,11 @@ void Server::PollServerAdvertisement()
         Body["ModsBlackList"] = Config.ModsBlacklist;
         Body["ModsRequiredList"] = Config.ModsRequiredList;        
         Body["ServerVersion"] = BuildConfig::MASTER_SERVER_CLIENT_VERSION;
+        Body["AllowSharding"] = Config.SupportSharding;
+        Body["WebAddress"] = Config.SupportSharding ? StringFormat("http://%s:%i", ((std::string)Body["Hostname"]).c_str(), Config.WebUIServerPort) : "";
+        Body["Port"] = Config.LoginServerPort;
+        Body["IsShard"] = !IsDefaultServer();
+        Body["GameType"] = GameTypeStrings[(int)ServerGameType];
 
         MasterServerUpdateRequest = std::make_shared<NetHttpRequest>();
         MasterServerUpdateRequest->SetMethod(NetHttpMethod::POST);
@@ -355,50 +468,74 @@ void Server::PollServerAdvertisement()
         MasterServerUpdateRequest->SetUrl(StringFormat("http://%s:%i/api/v1/servers", Config.MasterServerIp.c_str(), Config.MasterServerPort));
         if (!MasterServerUpdateRequest->SendAsync())
         {
-            Warning("Received error when trying to advertise server on master server. Failed to start request.");
+            Warning("Recieved error when trying to advertise server on master server. Failed to start request.");
             MasterServerUpdateRequest = nullptr;
         }
     }
 }
 
-void Server::RunUntilQuit()
+void Server::Poll()
 {
-    Success("Server is now running.");
-
-    // We should really do this event driven ...
-    // This suffices for now.
-    while (!QuitReceived)
     {
+        DebugTimerScope Scope(Debug::UpdateTime);
+
+        for (auto& Service : Services)
         {
-            DebugTimerScope Scope(Debug::UpdateTime);
-
-            for (auto& Service : Services)
-            {
-                Service->Poll();
-            }
-
-            PollDiscordNotices();
-            PollServerAdvertisement();
+            Service->Poll();
         }
 
-        // Emulate frametime spikes.
-        if constexpr (BuildConfig::EMULATE_SPIKES)
-        {
-            if (GetSeconds() > NextSpikeTime)
-            {
-                double DurationMs = FRandRange(BuildConfig::SPIKE_LENGTH_MIN, BuildConfig::SPIKE_LENGTH_MAX);
-                double IntervalMs = FRandRange(BuildConfig::SPIKE_INTERVAL_MIN, BuildConfig::SPIKE_INTERVAL_MAX);
-
-                Log("Emulating spike of %.2f ms", DurationMs);
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>(DurationMs)));
-
-                NextSpikeTime = GetSeconds() + (IntervalMs / 1000.0);
-            }
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        PollDiscordNotices();
+        PollServerAdvertisement();
     }
+
+    // Emulate frametime spikes.
+    if constexpr (BuildConfig::EMULATE_SPIKES)
+    {
+        if (GetSeconds() > NextSpikeTime)
+        {
+            double DurationMs = FRandRange(BuildConfig::SPIKE_LENGTH_MIN, BuildConfig::SPIKE_LENGTH_MAX);
+            double IntervalMs = FRandRange(BuildConfig::SPIKE_INTERVAL_MIN, BuildConfig::SPIKE_INTERVAL_MAX);
+
+            Log("Emulating spike of %.2f ms", DurationMs);
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>(DurationMs)));
+
+            NextSpikeTime = GetSeconds() + (IntervalMs / 1000.0);
+        }
+    }
+
+    // Write last activity time periodically to disk to keep this server instance alive.
+    if (GetSeconds() > NextKeepAliveTime)
+    {
+        if (!(int)GetService<GameService>()->GetClients().empty() || 
+            !std::filesystem::exists(KeepAliveFilePath))
+        {
+            const auto TimePoint = std::chrono::system_clock::now();
+            const size_t SecondsSinceEpoch = std::chrono::duration_cast<std::chrono::seconds>(TimePoint.time_since_epoch()).count();
+
+            WriteTextToFile(KeepAliveFilePath, StringFormat("%llu", SecondsSinceEpoch));
+        }
+
+        NextKeepAliveTime = GetSeconds() + 60.0f;
+    }
+}
+
+size_t Server::GetSecondsSinceLastActivity()
+{
+    if (std::filesystem::exists(KeepAliveFilePath))
+    {
+        std::string Output;
+        if (ReadTextFromFile(KeepAliveFilePath, Output))
+        {
+            const auto TimePoint = std::chrono::system_clock::now();
+            const size_t SecondsSinceEpoch = std::chrono::duration_cast<std::chrono::seconds>(TimePoint.time_since_epoch()).count();
+
+            const size_t LastActivity = std::stoull(Output.c_str());
+
+            return (SecondsSinceEpoch - LastActivity);
+        }
+    }
+    return 0;
 }
 
 void Server::SaveConfig()
@@ -508,11 +645,7 @@ void Server::PollDiscordNotices()
                         embed["color"] = "14423100"; // Red
                     }
 
-                    BossId bossId = static_cast<BossId>(Notice.extraId);
-                    if (auto Iter = DiscordBossThumbnails.find(bossId); Iter != DiscordBossThumbnails.end())
-                    {
-                        thumbnailUrl = Iter->second;
-                    }
+                    thumbnailUrl = GameInterface->GetBossDiscordThumbnailUrl(Notice.extraId);
 
                     break;
                 }
@@ -562,7 +695,7 @@ void Server::PollDiscordNotices()
             DiscordNoticeRequest->SetBody(FormattedBody);
             if (!DiscordNoticeRequest->SendAsync())
             {
-                Warning("Received error when trying to send discord notification.");
+                Warning("Recieved error when trying to send discord notification.");
             }
         }
     }
@@ -572,7 +705,7 @@ void Server::PollDiscordNotices()
         {
             if (!Response->GetWasSuccess())
             {
-                Warning("Received error when trying to send discord notification.");
+                Warning("Recieved error when trying to send discord notification.");
             }
             else
             {

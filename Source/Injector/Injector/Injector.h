@@ -10,6 +10,7 @@
 #pragma once
 
 #include "Shared/Platform/Platform.h"
+#include "Shared/Game/GameType.h"
 #include "Config/RuntimeConfig.h"
 
 #include "Injector/Hooks/Hook.h"
@@ -39,11 +40,15 @@ public:
     void SaveConfig();
 
     const RuntimeConfig& GetConfig()    { return Config; }
+    GameType GetGameType()              { return CurrentGameType; }
 
     intptr_t GetBaseAddress();
     
     using AOBByte = std::optional<uint8_t>;
     std::vector<intptr_t> SearchAOB(const std::vector<AOBByte>& pattern);
+
+    std::vector<intptr_t> SearchString(const std::string& input);
+    std::vector<intptr_t> SearchString(const std::wstring& input);
 
 private:
 
@@ -53,6 +58,8 @@ private:
 
     std::filesystem::path DllPath;
     std::filesystem::path ConfigPath;
+
+    GameType CurrentGameType;
 
     std::pair<intptr_t, size_t> ModuleRegion;
 

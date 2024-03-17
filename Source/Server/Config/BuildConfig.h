@@ -12,6 +12,26 @@
 #include <vector>
 #include <string>
 
+#include "Shared/Game/GameType.h"
+
+// Configuration for specific game types.
+struct GameTypeConfig
+{
+public:
+
+    // What minimum application version we support (this is the app version shown on the menu without the dot and -1).
+    // So 1.15 = 114
+    int MIN_APP_VERSION = 114;
+
+    // What application version we support (this is the app version shown on the menu without the dot and -1).
+    // So 1.15 = 114
+    int APP_VERSION = 116;
+
+    // AppId on steam for this title.
+    int STEAM_APPID = 374320;
+
+};
+
 // Abstract class that just holds various build-time 
 // configuration variables. Might be worth dumping this
 // into a json file at some point in future so it can 
@@ -22,29 +42,42 @@ public:
     
     BuildConfig() = delete;
 
+    inline static GameTypeConfig GameConfig[(int)GameType::COUNT] = {
+        // Unknown
+        {},
+
+        // Dark Souls 2
+        {
+            17039618,
+            17039619,
+            335300
+        },
+
+        // Dark Souls 3
+        {
+            114,
+            116,
+            374320
+        }
+    };
+
     // Version to give to the master-server when trying to advertise, used to hard-cut-off older server versions from advertising.
     inline static const int MASTER_SERVER_CLIENT_VERSION = 2;
 
+    // How many seconds without activity before a sharded server is cleaned up.
+    inline static const double SERVER_TIMEOUT = 60.0 * 60.0f;
+
     // How many seconds without messages causes a client to timeout.
-    inline static const double CLIENT_TIMEOUT = 60.0;
+    inline static const double CLIENT_TIMEOUT = 120.0;
 
     // How many seconds without refresh before an authentication ticket expires.
     inline static const double AUTH_TICKET_TIMEOUT = 30.0;
 
     // Maximum length of a packet in an Frpg2PacketStream.
     inline static const int MAX_PACKET_LENGTH = 8192;
-
-    // What minimum application version we support (this is the app version shown on the menu without the dot and -1).
-    // So 1.15 = 114
-    inline static const int MIN_APP_VERSION = 114;
-
-    // What application version we support (this is the app version shown on the menu without the dot and -1).
-    // So 1.15 = 114
-    inline static const int APP_VERSION = 116;
-
     // If true clients are disconnected if we are unable to handle the message they send.
     // Be careful with this, if we don't reply to some messages the client will deadlock.
-#if defined(_DEBUG)
+#if true// defined(_DEBUG)
     inline static const bool DISCONNECT_ON_UNHANDLED_MESSAGE = false;
 #else
     inline static const bool DISCONNECT_ON_UNHANDLED_MESSAGE = true;
@@ -64,7 +97,13 @@ public:
     constexpr inline static const bool EMIT_RELIABLE_UDP_PACKET_STREAM = false;
 
     // Writes messages that fail to deserialize to the local directory.
-    constexpr inline static const bool DUMP_FAILED_DISASSEMBLED_PACKETS = true;
+    constexpr inline static const bool DUMP_FAILED_DISASSEMBLED_PACKETS = false;
+
+    // Logs the protobufs sent and recieved.
+    constexpr inline static const bool LOG_PROTOBUF_STREAM = false;    
+
+    // Writes out legacy import files when the server starts.
+    constexpr inline static const bool SUPPORT_LEGACY_IMPORT_FILES = false;
 
     // How many seconds of inactivity before a webui authentication token expires.
     inline static const double WEBUI_AUTH_TIMEOUT = 60.0 * 60.0;

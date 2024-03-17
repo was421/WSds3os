@@ -21,15 +21,27 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace Loader
 {
+    public enum GameType
+    {
+        DarkSouls3,
+        DarkSouls2
+    }
+
     public partial class MainForm : Form
     {
         private ServerConfigList ServerList = new ServerConfigList();
         private IntPtr RunningProcessHandle = IntPtr.Zero;
         private uint RunningProcessId = 0;
         private Task QueryServerTask = null;
+
+        private GameType CurrentGameType = GameType.DarkSouls3;
+
+        private bool IgnoreInputChanges = false;
 
         private string MachinePrivateIp = "";
         private string MachinePublicIp = "";
@@ -50,8 +62,21 @@ namespace Loader
         }
 
         private void SaveConfig()
-        {
-            ProgramSettings.Default.exe_location = ExeLocationTextBox.Text;
+        {        
+            switch (CurrentGameType)
+            {
+                case GameType.DarkSouls3:
+                {
+                    ProgramSettings.Default.ds3_exe_location = ExeLocationTextBox.Text;
+                    break;
+                }
+                case GameType.DarkSouls2:
+                {
+                    ProgramSettings.Default.ds2_exe_location = ExeLocationTextBox.Text;
+                    break;
+                }
+            }
+
             ProgramSettings.Default.server_config_json = ServerList.ToJson();
             ProgramSettings.Default.hide_passworded = hidePasswordedBox.Checked;
             ProgramSettings.Default.minimum_players = (int)minimumPlayersBox.Value;
@@ -90,9 +115,9 @@ namespace Loader
             bool HasSelectedManualServer = false;
             if (ImportedServerListView.SelectedIndices.Count > 0)
             {
-                HasSelectedManualServer = GetConfigFromHostname((ImportedServerListView.SelectedItems[0].Tag as ServerConfig).Hostname).ManualImport;
+                HasSelectedManualServer = GetConfigFromId((ImportedServerListView.SelectedItems[0].Tag as ServerConfig).Id).ManualImport;
             }
-            RemoveButton.Enabled = HasSelectedManualServer;
+            //RemoveButton.Enabled = HasSelectedManualServer;
 
             if (ImportedServerListView.SelectedItems.Count <= 0)
             {
@@ -126,6 +151,11 @@ namespace Loader
             if (Config.ManualImport)
             {
                 return true;
+            }            
+            
+            if (Config.GameType != CurrentGameType.ToString())
+            {
+                return false;
             }
 
             string filter = filterBox.Text.ToLower();
@@ -138,11 +168,11 @@ namespace Loader
             }
             else
             {
-                if (Config.PasswordRequired && ProgramSettings.Default.hide_passworded)
+                if (Config.PasswordRequired && hidePasswordedBox.Checked)
                 {
                     return false;
                 }
-                if (Config.PlayerCount < ProgramSettings.Default.minimum_players)
+                if (Config.PlayerCount < minimumPlayersBox.Value)
                 {
                     return false;
                 }
@@ -164,7 +194,7 @@ namespace Loader
 
                 foreach (ListViewItem ViewItem in ImportedServerListView.Items)
                 {
-                    if ((ViewItem.Tag as ServerConfig).Hostname == Config.Hostname)
+                    if ((ViewItem.Tag as ServerConfig).Id == Config.Id)
                     {
                         ServerItem = ViewItem;
                         break;
@@ -177,7 +207,7 @@ namespace Loader
                     ImportedServerListView.Items.Add(ServerItem);
                 }
 
-                bool IsOfficial = (Config.Hostname == OfficialServer);
+                bool IsOfficial = (Config.Hostname == OfficialServer && !Config.IsShard);
 
                 ServerItem.Text = Config.Name;
                 ServerItem.Tag = Config;
@@ -217,7 +247,7 @@ namespace Loader
                     {
                         continue;
                     }
-                    if (Config.Hostname == (ViewItem.Tag as ServerConfig).Hostname)
+                    if (Config.Id == (ViewItem.Tag as ServerConfig).Id)
                     {
                         Exists = true;
                         break;
@@ -240,21 +270,30 @@ namespace Loader
         private void OnLoaded(object sender, EventArgs e)
         {
             string PredictedInstallPath = SteamUtils.GetGameInstallPath("DARK SOULS III") + @"\Game\DarkSoulsIII.exe";
-            if (!File.Exists(ProgramSettings.Default.exe_location) && File.Exists(PredictedInstallPath))
+            if (!File.Exists(ProgramSettings.Default.ds3_exe_location) && File.Exists(PredictedInstallPath))
             {
-                ProgramSettings.Default.exe_location = PredictedInstallPath;
+                ProgramSettings.Default.ds3_exe_location = PredictedInstallPath;
+            }
+            
+            PredictedInstallPath = SteamUtils.GetGameInstallPath("Dark Souls II Scholar of the First Sin") + @"\Game\DarkSoulsII.exe";
+            if (!File.Exists(ProgramSettings.Default.ds2_exe_location) && File.Exists(PredictedInstallPath))
+            {
+                ProgramSettings.Default.ds2_exe_location = PredictedInstallPath;
             }
 
-            ExeLocationTextBox.Text = ProgramSettings.Default.exe_location;
+            IgnoreInputChanges = true;
+            gameTabControl.SelectedIndex = 1;
+            ExeLocationTextBox.Text = ProgramSettings.Default.ds3_exe_location;
             hidePasswordedBox.Checked = ProgramSettings.Default.hide_passworded;
             minimumPlayersBox.Value = ProgramSettings.Default.minimum_players;
             ServerConfigList.FromJson(ProgramSettings.Default.server_config_json, out ServerList);
-
-            if (ProgramSettings.Default.master_server_url == "timleonard.uk")
-            {
-                ProgramSettings.Default.master_server_url = "ds3os-master.timleonard.uk";
-            }
-
+            IgnoreInputChanges = false;
+            
+#if false//DEBUG
+            ProgramSettings.Default.Reset();
+            ProgramSettings.Default.master_server_url = "http://127.0.0.1:50020";
+#endif
+            
             // Strip out any old config files downloaded from the server, we will be querying them
             // shortly anyway.
             foreach (ServerConfig Config in ServerList.Servers.ToArray())
@@ -264,6 +303,8 @@ namespace Loader
                     ServerList.Servers.Remove(Config);
                 }
             }
+            
+            ApplyTabSettings();
 
             ValidateUI();
             BuildServerList();
@@ -278,9 +319,22 @@ namespace Loader
         private void OnBrowseForExecutable(object sender, EventArgs e)
         {
             using (OpenFileDialog Dialog = new OpenFileDialog())
-            {
-                Dialog.Filter = "Dark Souls III|DarkSoulsIII.exe|All Files|*.*";
-                Dialog.Title = "Select DS3 Executable Location";
+            {            
+                switch (CurrentGameType)
+                {
+                    case GameType.DarkSouls3:
+                    {
+                        Dialog.Filter = "Dark Souls III|DarkSoulsIII.exe|All Files|*.*";
+                        Dialog.Title = "Select DS3 Executable Location";
+                        break;
+                    }
+                    case GameType.DarkSouls2:
+                    {
+                        Dialog.Filter = "Dark Souls II|DarkSoulsII.exe|All Files|*.*";
+                        Dialog.Title = "Select DS2 Executable Location";
+                        break;
+                    }
+                }
 
                 if (Dialog.ShowDialog() == DialogResult.OK)
                 {
@@ -292,31 +346,12 @@ namespace Loader
             }
         }
 
-        private void OnImportServerConfig(object sender, EventArgs e)
-        {
-            using (OpenFileDialog Dialog = new OpenFileDialog())
+        private void OnCreateNewServer(object sender, EventArgs e)
+        {        
+            Forms.CreateServerDialog Dialog = new Forms.CreateServerDialog(ServerList.Servers, MachinePublicIp, this, CurrentGameType);
+            if (Dialog.ShowDialog() != DialogResult.OK)
             {
-                Dialog.Filter = "Dark Souls III - Server Config|*.ds3osconfig|All Files|*.*";
-                Dialog.Title = "Select Server Configuration File";
-
-                if (Dialog.ShowDialog() == DialogResult.OK)
-                {
-                    string JsonContents = File.ReadAllText(Dialog.FileName);
-                    ServerConfig NewServerConfig;
-
-                    if (!ServerConfig.FromJson(JsonContents, out NewServerConfig))
-                    {
-                        MessageBox.Show("Failed to load server configuration, are you sure its in the correct format?", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    else
-                    {
-                        ServerList.Servers.Add(NewServerConfig);
-                    }
-
-                    BuildServerList();
-                    SaveConfig();
-                    ValidateUI();
-                }
+                return;
             }
         }
 
@@ -326,7 +361,7 @@ namespace Loader
         {
             if (ImportedServerListView.SelectedItems.Count > 0)
             {
-                CurrentServerConfig = GetConfigFromHostname((ImportedServerListView.SelectedItems[0].Tag as ServerConfig).Hostname);
+                CurrentServerConfig = GetConfigFromId((ImportedServerListView.SelectedItems[0].Tag as ServerConfig).Id);
             }
 
             ValidateUI();
@@ -337,7 +372,7 @@ namespace Loader
         {
             if (ImportedServerListView.SelectedItems.Count > 0)
             {
-                ServerConfig Config = GetConfigFromHostname((ImportedServerListView.SelectedItems[0].Tag as ServerConfig).Hostname);
+                ServerConfig Config = GetConfigFromId((ImportedServerListView.SelectedItems[0].Tag as ServerConfig).Id);
 
                 for (int i = 0; i < ServerList.Servers.Count; i++)
                 {
@@ -408,7 +443,7 @@ namespace Loader
                 bool Exists = false;
                 foreach (ServerConfig ExistingServer in ServerList.Servers)
                 {
-                    if (ExistingServer.Hostname == Server.Hostname)
+                    if (ExistingServer.Id == Server.Id)
                     {
                         ExistingServer.CopyTransientPropsFrom(Server);
                         Exists = true;
@@ -437,7 +472,7 @@ namespace Loader
                         continue;
                     }
 
-                    if (Server1.Hostname == Server2.Hostname)
+                    if (Server1.Id == Server2.Id)
                     {
                         Duplicate = true;
                         break;
@@ -467,7 +502,7 @@ namespace Loader
                 bool Exists = false;
                 foreach (ServerConfig Server in Servers)
                 {
-                    if (ExistingServer.Hostname == Server.Hostname)
+                    if (ExistingServer.Id == Server.Id)
                     {
                         Exists = true;
                         break;
@@ -487,11 +522,11 @@ namespace Loader
             BuildServerList();
         }
 
-        private ServerConfig GetConfigFromHostname(string Hostname)
+        private ServerConfig GetConfigFromId(string Id)
         {
             for (int i = 0; i < ServerList.Servers.Count; i++)
             {
-                if (ServerList.Servers[i].Hostname == Hostname)
+                if (ServerList.Servers[i].Id == Id)
                 {
                     return ServerList.Servers[i];
                 }
@@ -502,7 +537,7 @@ namespace Loader
 
         private void OnLaunch(object sender, EventArgs e)
         {
-            ServerConfig Config = GetConfigFromHostname((ImportedServerListView.SelectedItems[0].Tag as ServerConfig).Hostname);
+            ServerConfig Config = GetConfigFromId((ImportedServerListView.SelectedItems[0].Tag as ServerConfig).Id);
 
             if (string.IsNullOrEmpty(Config.PublicKey))
             {
@@ -518,7 +553,7 @@ namespace Loader
                 {
                     Task GetKeyTask = Task.Run(() =>
                     {
-                        Config.PublicKey = MasterServerApi.GetPublicKey(Config.IpAddress, "");
+                        Config.PublicKey = MasterServerApi.GetPublicKey(Config.Id, "");
                     });
 
                     while (!GetKeyTask.IsCompleted)
@@ -596,10 +631,7 @@ namespace Loader
             string ExeDirectory = Path.GetDirectoryName(ExeLocation);
  
             string AppIdFile = Path.Combine(ExeDirectory, "steam_appid.txt");
-            if (!File.Exists(AppIdFile))
-            {
-                File.WriteAllText(AppIdFile, BuildConfig.SteamAppId.ToString());
-            }
+            File.WriteAllText(AppIdFile, LoadConfig.SteamAppId.ToString());
 
             STARTUPINFO StartupInfo = new STARTUPINFO();
             PROCESS_INFORMATION ProcessInfo = new PROCESS_INFORMATION();
@@ -650,6 +682,9 @@ namespace Loader
                 injectConfig.ServerName = Config.Name;
                 injectConfig.ServerPublicKey = Config.PublicKey;
                 injectConfig.ServerHostname = ConnectionHostname;
+                injectConfig.ServerPort = Config.Port;
+                injectConfig.ServerGameType = Config.GameType;
+                injectConfig.EnableSeperateSaveFiles = ProgramSettings.Default.use_seperate_saves;
 
                 string json = injectConfig.ToJson();
                 File.WriteAllText(InjectorConfigPath, json);
@@ -773,6 +808,7 @@ namespace Loader
             if (ExistingProcess != null)
             {
                 WinAPIProcesses.KillMutex(ExistingProcess, "\\BaseNamedObjects\\DarkSoulsIIIMutex");
+                WinAPIProcesses.KillMutex(ExistingProcess, "\\BaseNamedObjects\\DarkSoulsIIMutex");
             }
         }
 
@@ -814,6 +850,11 @@ namespace Loader
 
         private void OnFilterPropertyChanged(object sender, EventArgs e)
         {
+            if (IgnoreInputChanges)
+            {
+                return;
+            }
+
             SaveConfig();
             BuildServerList();
         }
@@ -854,6 +895,45 @@ namespace Loader
                 ImportedServerListView.Columns[Sorter.SortColumn].Text = "↓ " + ColumnNames[Sorter.SortColumn];
             }
             ImportedServerListView.Sort();
+        }
+
+        private void SettingsButton_Click(object sender, EventArgs e)
+        {
+            SettingsForm dialog = new SettingsForm();
+            dialog.ExeLocation = ExeLocationTextBox.Text;
+            dialog.ShowDialog();
+        }
+
+        private void GameTabControl_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            ApplyTabSettings();
+            ValidateUI();
+            BuildServerList();
+        }
+
+        private void ApplyTabSettings()
+        {
+            CurrentGameType = GameType.DarkSouls2;
+            if (gameTabControl.SelectedIndex == 1)
+            {
+                CurrentGameType = GameType.DarkSouls3;
+            }
+
+            switch (CurrentGameType)
+            {
+                case GameType.DarkSouls3:
+                {
+                    ExeLocationTextBox.Text = ProgramSettings.Default.ds3_exe_location;
+                    ExePathLabel.Text = "DarkSoulsIII.exe Location";
+                    break;
+                }
+                case GameType.DarkSouls2:
+                {
+                    ExeLocationTextBox.Text = ProgramSettings.Default.ds2_exe_location;
+                    ExePathLabel.Text = "DarkSoulsII.exe Location";
+                    break;
+                }
+            }
         }
     }
 

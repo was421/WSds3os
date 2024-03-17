@@ -22,5 +22,22 @@ public:
     
     BuildConfig() = delete;
 
+    // Turns off redirectly to custom server, goes to retail instead.
+    // (WARNING: This may get you banned, don't touch unless you know what you are doing).
+    inline static const bool DO_NOT_REDIRECT = false;
+
+    // Writes out all protobufs to a temporary folder
+    inline static const bool WRITE_OUT_PROTOBUFS = false;
+
+#ifdef _DEBUG
+    // Writes out all the decoded format of all protobufs encountered so far.
+    inline static const bool WRITE_OUT_DECODED_PROTOBUFS = true;
+#else
+    // Writes out all the decoded format of all protobufs encountered so far.
+    inline static const bool WRITE_OUT_DECODED_PROTOBUFS = false;
+#endif
+
+    // Writes out all protobufs to a temporary folder
+    inline static const char* TEMP_LOG_FOLDER = "D:\\Temp\\";
 
 };

@@ -11,11 +11,6 @@
 #include "Server/Server.h"
 #include "Server/GameService/GameService.h"
 #include "Server/GameService/GameClient.h"
-#include "Server/GameService/GameManagers/BloodMessage/BloodMessageManager.h"
-#include "Server/GameService/GameManagers/Bloodstain/BloodstainManager.h"
-#include "Server/GameService/GameManagers/QuickMatch/QuickMatchManager.h"
-#include "Server/GameService/GameManagers/Signs/SignManager.h"
-#include "Server/GameService/GameManagers/Ghosts/GhostManager.h"
 
 #include "Shared/Core/Utils/Logging.h"
 #include "Shared/Core/Utils/Strings.h"
@@ -73,13 +68,16 @@ bool DebugStatisticsHandler::handleGet(CivetServer* Server, struct mg_connection
         }
 
         auto logs = nlohmann::json::array();
-        for (const LogMessage& Message : GetRecentLogs())
+        if (Service->GetServer()->IsDefaultServer())
         {
-            auto stat = nlohmann::json::object();
-            stat["level"] = Message.Level;
-            stat["source"] = Message.Source;
-            stat["message"] = Message.Message;
-            logs.push_back(stat);
+            for (const LogMessage& Message : GetRecentLogs())
+            {
+                auto stat = nlohmann::json::object();
+                stat["level"] = Message.Level;
+                stat["source"] = Message.Source;
+                stat["message"] = Message.Message;
+                logs.push_back(stat);
+            }
         }
 
         json["timers"] = timers;

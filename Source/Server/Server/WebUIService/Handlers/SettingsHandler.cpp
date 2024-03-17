@@ -53,17 +53,9 @@ bool SettingsHandler::handleGet(CivetServer* Server, struct mg_connection* Conne
     json["disableAutoSummonInvasions"] = Config.DisableInvasionAutoSummon;
     json["disableWeaponLevelMatching"] = IsWeaponLevelMatchingDisabled();
     json["disableSoulLevelMatching"] = IsSoulLevelMatchingDisabled();
+    json["disableSoulMemoryMatching"] = IsSoulMemoryMatchingDisabled();
     json["ignoreInvasionAreaFilter"] = Config.IgnoreInvasionAreaFilter;
     json["antiCheatEnabled"] = Config.AntiCheatEnabled;
-
-    nlohmann::json announcementsJson;
-    for (const auto& Announcement : Config.Announcements) {
-        nlohmann::json jsonObj;
-        jsonObj["header"] = Announcement.Header;
-        jsonObj["body"] = Announcement.Body;
-        announcementsJson.push_back(jsonObj);
-    }
-    json["announcements"] = announcementsJson;
     
     RespondJson(Connection, json);
 
@@ -99,14 +91,19 @@ bool SettingsHandler::handlePost(CivetServer* Server, struct mg_connection* Conn
     {
         Config.Password = json["password"];
     }
-    if (json.contains("publicHostname"))
+
+    if (Service->GetServer()->IsDefaultServer())
     {
-        Config.ServerHostname = json["publicHostname"];
+        if (json.contains("publicHostname"))
+        {
+            Config.ServerHostname = json["publicHostname"];
+        }
+        if (json.contains("privateHostname"))
+        {
+            Config.ServerPrivateHostname = json["privateHostname"];
+        }
     }
-    if (json.contains("privateHostname"))
-    {
-        Config.ServerPrivateHostname = json["privateHostname"];
-    }
+
     if (json.contains("advertise"))
     {
         Config.Advertise = json["advertise"];
@@ -171,20 +168,21 @@ bool SettingsHandler::handlePost(CivetServer* Server, struct mg_connection* Conn
             Config.UndeadMatchMatchingParameters.DisableLevelMatching = json["disableSoulLevelMatching"];
         }
     }
-    if (json.contains("announcements"))
+    if (json.contains("disableSoulMemoryMatching"))
     {
-        if (json["announcements"].is_array())
-        {
-            Config.Announcements.clear();
-            for (const auto& announcement : json["announcements"])
-            {
-                Config.Announcements.push_back(
-                    {
-                        std::string(announcement.contains("header") ? announcement["header"] : ""),
-                        std::string(announcement.contains("body") ? announcement["body"] : "")
-                    }
-                );
-            }
+        if (json["disableSoulMemoryMatching"] != IsSoulMemoryMatchingDisabled())
+        {        
+            Config.DS2_WhiteSoapstoneMatchingParameters.DisableSoulMemoryMatching = json["disableSoulMemoryMatching"];
+            Config.DS2_SmallWhiteSoapstoneMatchingParameters.DisableSoulMemoryMatching = json["disableSoulMemoryMatching"];
+            Config.DS2_RedSoapstoneMatchingParameters.DisableSoulMemoryMatching = json["disableSoulMemoryMatching"];
+            Config.DS2_MirrorKnightMatchingParameters.DisableSoulMemoryMatching = json["disableSoulMemoryMatching"];
+            Config.DS2_DragonEyeMatchingParameters.DisableSoulMemoryMatching = json["disableSoulMemoryMatching"];
+            Config.DS2_RedEyeOrbMatchingParameters.DisableSoulMemoryMatching = json["disableSoulMemoryMatching"];
+            Config.DS2_BlueEyeOrbMatchingParameters.DisableSoulMemoryMatching = json["disableSoulMemoryMatching"];
+            Config.DS2_BellKeeperMatchingParameters.DisableSoulMemoryMatching = json["disableSoulMemoryMatching"];
+            Config.DS2_RatMatchingParameters.DisableSoulMemoryMatching = json["disableSoulMemoryMatching"];
+            Config.DS2_BlueSentinelMatchingParameters.DisableSoulMemoryMatching = json["disableSoulMemoryMatching"];
+            Config.DS2_ArenaMatchingParameters.DisableSoulMemoryMatching = json["disableSoulMemoryMatching"];
         }
     }
 
@@ -221,4 +219,22 @@ bool SettingsHandler::IsSoulLevelMatchingDisabled()
         Config.MoundMakerInvasionMatchingParameters.DisableLevelMatching ||
         Config.CovenantInvasionMatchingParameters.DisableLevelMatching ||
         Config.UndeadMatchMatchingParameters.DisableLevelMatching;
+}
+
+bool SettingsHandler::IsSoulMemoryMatchingDisabled()
+{
+    RuntimeConfig& Config = Service->GetServer()->GetMutableConfig();
+
+    return 
+        Config.DS2_WhiteSoapstoneMatchingParameters.DisableSoulMemoryMatching ||
+        Config.DS2_SmallWhiteSoapstoneMatchingParameters.DisableSoulMemoryMatching ||
+        Config.DS2_RedSoapstoneMatchingParameters.DisableSoulMemoryMatching ||
+        Config.DS2_MirrorKnightMatchingParameters.DisableSoulMemoryMatching ||
+        Config.DS2_DragonEyeMatchingParameters.DisableSoulMemoryMatching ||
+        Config.DS2_RedEyeOrbMatchingParameters.DisableSoulMemoryMatching ||
+        Config.DS2_BlueEyeOrbMatchingParameters.DisableSoulMemoryMatching ||
+        Config.DS2_BellKeeperMatchingParameters.DisableSoulMemoryMatching ||
+        Config.DS2_RatMatchingParameters.DisableSoulMemoryMatching ||
+        Config.DS2_BlueSentinelMatchingParameters.DisableSoulMemoryMatching ||
+        Config.DS2_ArenaMatchingParameters.DisableSoulMemoryMatching;
 }

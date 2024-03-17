@@ -37,7 +37,10 @@ public:
 
     std::string GetName();
 
-    PlayerState& GetPlayerState() { return State; }
+    PlayerState& GetPlayerState() { return *State; }
+
+    template <typename T>
+    T& GetPlayerStateType() { return static_cast<T&>(*State); }
 
     double GetConnectionDuration() { return GetSeconds() - ConnectTime; }
 
@@ -50,6 +53,7 @@ public:
     std::shared_ptr<Frpg2ReliableUdpMessageStream> MessageStream;
 
     std::vector<std::shared_ptr<SummonSign>> ActiveSummonSigns;
+    std::vector<std::shared_ptr<SummonSign>> ActiveMirrorKnightSummonSigns;    
 
     double ConnectTime = GetSeconds();
 
@@ -73,6 +77,6 @@ private:
 
     double LastMessageReceivedTime = 0.0;
 
-    PlayerState State;
+    std::unique_ptr<PlayerState> State;
 
 };

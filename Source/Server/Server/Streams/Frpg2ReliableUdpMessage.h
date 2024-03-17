@@ -10,25 +10,18 @@
 #pragma once
 
 #include "Shared/Core/Utils/Endian.h"
+#include "Shared/Game/GameType.h"
 
 #include <vector>
 #include <memory>
 
-#include "Protobuf/Protobufs.h"
+#include "Protobuf/SharedProtobufs.h"
 
-// All the id's of message type we can recieve.
-enum class Frpg2ReliableUdpMessageType
+// ID's of messages we can recieve. Individual game interfaces may have additional values.
+enum class Frpg2ReliableUdpMessageType : int
 {
     Reply = 0x0,
-    Push = 0x0320,
-
-#define DEFINE_REQUEST_RESPONSE(OpCode, Type, ProtobufClass, ResponseProtobufClass)         Type = OpCode,
-#define DEFINE_MESSAGE(OpCode, Type, ProtobufClass)                                         Type = OpCode,
-#define DEFINE_PUSH_MESSAGE(OpCode, Type, ProtobufClass)                                    /* Do Nothing */
-#include "Server/Streams/Frpg2ReliableUdpMessageTypes.inc"
-#undef DEFINE_PUSH_MESSAGE
-#undef DEFINE_MESSAGE
-#undef DEFINE_REQUEST_RESPONSE
+    Push = 0x0320
 };
 
 #pragma pack(push, 1)
@@ -44,6 +37,12 @@ public:
         header_size = BigEndianToHostOrder(header_size);
         msg_type    = BigEndianToHostOrder(msg_type);
         msg_index   = LittleEndianToHostOrder(msg_index); // Message index remains in little endian for whatever reason.
+    }
+
+    template <typename T>
+    bool IsType(T value) const
+    {
+        return (int)value == (int)msg_type;
     }
 };
 static_assert(sizeof(Frpg2ReliableUdpMessageHeader) == 12, "Message header is not expected size.");
@@ -63,7 +62,6 @@ public:
 static_assert(sizeof(Frpg2ReliableUdpMessageResponseHeader) == 16, "Message header is not expected size.");
 #pragma pack(pop)
 
-
 struct Frpg2ReliableUdpMessage
 {
 public:
@@ -82,7 +80,3 @@ public:
 
     std::string Disassembly;
 };
-
-bool Protobuf_To_ReliableUdpMessageType(google::protobuf::MessageLite* Message, Frpg2ReliableUdpMessageType& Output);
-bool ReliableUdpMessageType_To_Protobuf(Frpg2ReliableUdpMessageType Type, bool IsResponse, std::shared_ptr<google::protobuf::MessageLite>& Output);
-bool ReliableUdpMessageType_Expects_Response(Frpg2ReliableUdpMessageType Type);
