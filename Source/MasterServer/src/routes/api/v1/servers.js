@@ -58,7 +58,8 @@ function IsCensored(Name)
 
 function IsServerFilter(ServerInfo)
 {
-    if (ServerInfo['Version'] < GOldestSupportedVersion) {
+    if (ServerInfo['Version'] < GOldestSupportedVersion) 
+    {
         return true;
     }
 
@@ -74,11 +75,11 @@ function IsServerCensored(ServerInfo)
             IsCensored(ServerInfo['Hostname']);
 }
 
-function RemoveServer(IpAddress)
+function RemoveServer(Id)
 {
     for (var i = 0; i < GActiveServers.length; i++)
     {
-        if (GActiveServers[i].IpAddress == IpAddress)
+        if (GActiveServers[i].Id == Id)
         {
             GActiveServers.splice(i, 1);
             break;
@@ -86,10 +87,12 @@ function RemoveServer(IpAddress)
     }
 }
 
-function AddServer(IpAddress, hostname, private_hostname, description, name, public_key, player_count, password, mods_white_list, mods_black_list, mods_required_list, version)
+function AddServer(Id, IpAddress, hostname, private_hostname, description, name, public_key, player_count, password, mods_white_list, mods_black_list, mods_required_list, version, allow_sharding, web_address, port, is_shard, game_type)
 {
     var ServerObj = {
+        "Id": Id,
         "IpAddress": IpAddress,
+        "Port": port,
         "Hostname": hostname,
         "PrivateHostname": private_hostname,
         "Description": description,
@@ -100,6 +103,10 @@ function AddServer(IpAddress, hostname, private_hostname, description, name, pub
         "ModsWhiteList": mods_white_list,
         "ModsBlackList": mods_black_list,
         "ModsRequiredList": mods_required_list,
+        "AllowSharding": allow_sharding,
+        "IsShard": is_shard,
+        "GameType": game_type,
+        "WebAddress": web_address,
         "UpdatedTime": Date.now(),
         "Version": version,
         "Censored": false
@@ -117,7 +124,7 @@ function AddServer(IpAddress, hostname, private_hostname, description, name, pub
 
     for (var i = 0; i < GActiveServers.length; i++)
     {
-        if (GActiveServers[i].IpAddress == IpAddress)
+        if (GActiveServers[i].Id == Id)
         {
             GActiveServers[i] = ServerObj;
             return;
@@ -126,7 +133,7 @@ function AddServer(IpAddress, hostname, private_hostname, description, name, pub
 
     GActiveServers.push(ServerObj);
     
-    console.log(`Adding server: ip=${IpAddress} name=${name}`);
+    console.log(`Adding server: id=${Id} ip=${IpAddress} port=${port} type=${game_type} name=${name}`);
     console.log(`Total servers is now ${GActiveServers.length}`);
 }
 
@@ -176,7 +183,9 @@ router.get('/', async (req, res) => {
         }
 
         ServerInfo.push({
+            "Id": Server["Id"],
             "IpAddress": Server["IpAddress"],
+            "Port": Server["Port"],
             "Hostname": Server["Hostname"],
             "PrivateHostname": Server["PrivateHostname"],
             "Description": DisplayDescription,
@@ -185,17 +194,21 @@ router.get('/', async (req, res) => {
             "PasswordRequired": Server["Password"].length > 0,
             "ModsWhiteList": Server["ModsWhiteList"],
             "ModsBlackList": Server["ModsBlackList"],
-            "ModsRequiredList": Server["ModsRequiredList"]
+            "ModsRequiredList": Server["ModsRequiredList"],
+            "AllowSharding": Server["AllowSharding"],
+            "IsShard": Server["IsShard"],
+            "GameType": Server["GameType"],
+            "WebAddress": Server["WebAddress"]
         });
     }
 
     res.json({ "status":"success", "servers": ServerInfo });
 });
 
-// @route POST api/v1/servers/:ip_address/public_key
+// @route POST api/v1/servers/:id/public_key
 // @description Get the public kley of a given server.
 // @access Public
-router.post('/:ip_address/public_key', async (req, res) => { 
+router.post('/:id/public_key', async (req, res) => { 
     if (!('password' in req.body))
     {
         res.json({ "status":"error", "message":"Expected password in body." });
@@ -203,10 +216,10 @@ router.post('/:ip_address/public_key', async (req, res) => {
     }
 
     var password = req.body["password"];
- 
+
     for (var i = 0; i < GActiveServers.length; i++)
     {
-        if (GActiveServers[i].IpAddress == req.params.ip_address)
+        if (GActiveServers[i].Id == req.params.id)
         {
             if (password == GActiveServers[i].Password)
             {
@@ -288,9 +301,41 @@ router.post('/', async (req, res) => {
     var mods_white_list = req.body["ModsWhiteList"];
     var mods_black_list = req.body["ModsBlackList"];
     var mods_required_list = req.body["ModsRequiredList"];
+    var allow_sharding = false;
+    var is_shard = false;
+    var game_type = "DarkSouls3";
+    var web_address = "";
+    var server_id = req.connection.remoteAddress;
+    var port = 50050;
+
+    if ('AllowSharding' in req.body)
+    {
+        allow_sharding = (req.body["AllowSharding"] == "1" || req.body["AllowSharding"] == "true");
+    }
+    if ('WebAddress' in req.body)
+    {
+        web_address = req.body["WebAddress"];
+    }
+    if ('ServerId' in req.body)
+    {
+        server_id = req.body["ServerId"];
+    }
+    if ('Port' in req.body)
+    {
+        port = req.body["Port"];
+    }
+    if ('IsShard' in req.body)
+    {
+        is_shard = (req.body["IsShard"] == "1" || req.body["IsShard"] == "true");
+    }
+    if ('GameType' in req.body)
+    {
+        game_type = req.body["GameType"];
+    }
+
     var version = ('ServerVersion' in req.body) ? parseInt(req.body['ServerVersion']) : 1;
 
-    AddServer(req.connection.remoteAddress, hostname, private_hostname, description, name, public_key, player_count, password, mods_white_list, mods_black_list, mods_required_list, version);
+    AddServer(server_id, req.connection.remoteAddress, hostname, private_hostname, description, name, public_key, player_count, password, mods_white_list, mods_black_list, mods_required_list, version, allow_sharding, web_address, port, is_shard, game_type);
     
     res.json({ "status":"success" });
 });
@@ -299,7 +344,14 @@ router.post('/', async (req, res) => {
 // @description Delete the server registered to the clients ip.
 // @access Public
 router.delete('/', (req, res) => { 
-    RemoveServer(req.connection.remoteAddress);
+    
+    var server_id = req.connection.remoteAddress;
+    if ('ServerId' in req.body)
+    {
+        server_id = req.body["ServerId"];
+    }
+
+    RemoveServer(server_id);
     res.json({ "status":"success" });
 });
 

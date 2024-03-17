@@ -103,6 +103,13 @@ namespace Loader
             ListServersResponse Result = DoRequest<ListServersResponse>(HttpMethod.Get, ProgramSettings.Default.master_server_url + "/api/v1/servers");
             if (Result != null && Result.Servers != null)
             {
+                foreach (ServerConfig config in Result.Servers)
+                {
+                    if (string.IsNullOrEmpty(config.Id))
+                    {
+                        config.Id = config.IpAddress;
+                    }
+                }
                 return Result.Servers;
             }
             else
@@ -111,12 +118,12 @@ namespace Loader
             }
         }
 
-        public static string GetPublicKey(string ServerIpAddress, string Password)
+        public static string GetPublicKey(string ServerId, string Password)
         {
             GetPublicKeyRequest Request = new GetPublicKeyRequest();
             Request.Password = Password;
 
-            GetPublicKeyResponse Result = DoRequest<GetPublicKeyResponse>(HttpMethod.Post, ProgramSettings.Default.master_server_url + "/api/v1/servers/" + ServerIpAddress + "/public_key", JsonContent.Create<GetPublicKeyRequest>(Request));
+            GetPublicKeyResponse Result = DoRequest<GetPublicKeyResponse>(HttpMethod.Post, ProgramSettings.Default.master_server_url + "/api/v1/servers/" + ServerId + "/public_key", JsonContent.Create<GetPublicKeyRequest>(Request));
             if (Result != null)
             {
                 return Result.PublicKey;

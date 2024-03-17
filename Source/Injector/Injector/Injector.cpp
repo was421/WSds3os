@@ -19,8 +19,11 @@
 #include "Shared/Core/Utils/WinApi.h"
 #include "Shared/Core/Utils/Strings.h"
 
-#include "Injector/Hooks/ReplaceServerAddressHook.h"
-#include "Injector/Hooks/ChangeSaveGameFilenameHook.h"
+#include "Injector/Hooks/DarkSouls3/DS3_ReplaceServerAddressHook.h"
+#include "Injector/Hooks/DarkSouls2/DS2_ReplaceServerAddressHook.h"
+#include "Injector/Hooks/DarkSouls2/DS2_LogProtobufsHook.h"
+#include "Injector/Hooks/Shared/ReplaceServerPortHook.h"
+#include "Injector/Hooks/Shared/ChangeSaveGameFilenameHook.h"
 
 #include <thread>
 #include <chrono>
@@ -92,11 +95,31 @@ bool Injector::Init()
         return false;
     }
 
+    if (!ParseGameType(Config.ServerGameType.c_str(), CurrentGameType))
+    {
+        Error("Unknown game type in configuration file: %s", Config.ServerGameType.c_str());
+        return false;
+    }
+
     Log("Server Name: %s", Config.ServerName.c_str());
     Log("Server Hostname: %s", Config.ServerHostname.c_str());
-    Log("");
+    Log("Server Port: %i", Config.ServerPort);
+    Log("Server Game Type: %s", Config.ServerGameType.c_str());
 
-    ModuleRegion = GetModuleBaseRegion("DarkSoulsIII.exe");
+    switch (CurrentGameType)
+    {
+        case GameType::DarkSouls3:
+        {
+            ModuleRegion = GetModuleBaseRegion("DarkSoulsIII.exe");
+            break;
+        }
+        case GameType::DarkSouls2:
+        {
+            ModuleRegion = GetModuleBaseRegion("DarkSoulsII.exe");
+            break;
+        }
+    }
+
     Log("Base Address: 0x%p",ModuleRegion.first);
     Log("Base Size: 0x%08x", ModuleRegion.second);
     Log("");
@@ -105,6 +128,44 @@ bool Injector::Init()
     {
         Error("Failed to get module region for DarkSoulsIII.exe.");
         return false;
+    }
+
+    // Add hooks we need to use based on configuration.
+    switch (CurrentGameType)
+    {
+        case GameType::DarkSouls3:
+        {
+            if (!BuildConfig::DO_NOT_REDIRECT)
+            {
+                Hooks.push_back(std::make_unique<DS3_ReplaceServerAddressHook>());
+            }
+            break;
+        }
+        case GameType::DarkSouls2:
+        {
+            if (!BuildConfig::DO_NOT_REDIRECT)
+            {
+                Hooks.push_back(std::make_unique<DS2_ReplaceServerAddressHook>());
+            }
+
+#ifdef _DEBUG
+            Hooks.push_back(std::make_unique<DS2_LogProtobufsHook>());
+#endif
+            break;
+        }
+    }
+
+    if (!BuildConfig::DO_NOT_REDIRECT)
+    {
+        Hooks.push_back(std::make_unique<ReplaceServerPortHook>());
+    }
+
+    if (Config.EnableSeperateSaveFiles)
+    {
+        if (!BuildConfig::DO_NOT_REDIRECT)
+        {
+            Hooks.push_back(std::make_unique<ChangeSaveGameFilenameHook>());
+        }
     }
 
     Log("Installing hooks ...");
@@ -204,4 +265,34 @@ std::vector<intptr_t> Injector::SearchAOB(const std::vector<AOBByte>& pattern)
     }
 
     return Matches;
+}
+
+std::vector<intptr_t> Injector::SearchString(const std::string& input)
+{
+    std::vector<AOBByte> aob;
+    aob.reserve(input.size());
+
+    for (size_t i = 0; i < input.size(); i++)
+    {
+        aob.push_back(input[i]);
+    }
+
+    return SearchAOB(aob);
+}
+
+std::vector<intptr_t> Injector::SearchString(const std::wstring& input)
+{
+    std::vector<AOBByte> aob;
+    aob.reserve(input.size() * 2);
+
+    for (size_t i = 0; i < input.size(); i++)
+    {
+        wchar_t val = input[i];
+        uint8_t upper = (val >> 8) & 0xFF;
+        uint8_t lower = (val >> 0) & 0xFF;
+        aob.push_back(upper);
+        aob.push_back(lower);
+    }
+
+    return SearchAOB(aob);
 }

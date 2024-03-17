@@ -46,6 +46,8 @@
 *.exe
 *.out
 *.app
+!Source/ThirdParty/**.exe
+!Source/ThirdParty/**/*.exe
 !Resources/Prerequisites/*.exe
 !Tools/**.exe
 !Tools/**/*.exe
@@ -70,7 +72,5 @@ Tools/Utilities/ScyllaHide/
 Tools/Utilities/ServerAddressFinder/
 Tools/Deploy/
 
-#random
-build/
-out/
-.vscode/
+# for nix build .
+result

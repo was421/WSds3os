@@ -9,9 +9,7 @@
 
 #pragma once
 
-#include "Server/GameService/Utils/GameIds.h"
-
-#include "Protobuf/Protobufs.h"
+#include <Protobuf/SharedProtobufs.h>
 
 #include <unordered_set>
 
@@ -19,7 +17,8 @@
 struct BloodMessage
 {
     uint32_t MessageId;
-    OnlineAreaId OnlineAreaId;
+    uint32_t OnlineAreaId;
+    uint64_t CellId;
 
     uint32_t PlayerId;
     std::string PlayerSteamId;
@@ -36,7 +35,8 @@ struct BloodMessage
 struct Bloodstain
 {
     uint32_t BloodstainId;
-    OnlineAreaId OnlineAreaId;
+    uint32_t OnlineAreaId;
+    uint64_t CellId;
 
     uint32_t PlayerId;
     std::string PlayerSteamId;
@@ -49,7 +49,8 @@ struct Bloodstain
 struct Ghost
 {
     uint32_t GhostId;
-    OnlineAreaId OnlineAreaId;
+    uint32_t OnlineAreaId;
+    uint64_t CellId;
 
     uint32_t PlayerId;
     std::string PlayerSteamId;
@@ -57,18 +58,18 @@ struct Ghost
     std::vector<uint8_t> Data;
 };
 
-// Summon sign, only stored in live cache for now.
 struct SummonSign
 {
     uint32_t SignId;
-    OnlineAreaId OnlineAreaId;
+    uint32_t OnlineAreaId;
+    uint64_t CellId;
 
     uint32_t PlayerId;
     std::string PlayerSteamId;
 
-    bool IsRedSign = false;
+    uint32_t Type;
 
-    Frpg2RequestMessage::MatchingParameter MatchingParameters;
+    std::unique_ptr<google::protobuf::MessageLite> MatchingParameters;
 
     std::vector<uint8_t> PlayerStruct;
 
