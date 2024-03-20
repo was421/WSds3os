@@ -17,7 +17,7 @@
 class Server;
 class LoginClient;
 class NetConnection;
-class NetConnectionWebSocket;
+class NetConnectionTCP;
 class RSAKeyPair;
 
 // The login server is the first server the game client attempts to contact.

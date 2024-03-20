@@ -21,7 +21,7 @@ class Server;
 class GameClient;
 class GameManager;
 class NetConnection;
-class NetConnectionWebSocket;
+class NetConnectionUDP;
 class RSAKeyPair;
 class Cipher;
 

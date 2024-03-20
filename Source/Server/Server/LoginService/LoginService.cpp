@@ -13,7 +13,7 @@
 #include "Server/Server.h"
 
 #include "Shared/Core/Network/NetConnection.h"
-#include "Shared/Core/Network/NetConnectionWebSocket.h"
+#include "Shared/Core/Network/NetConnectionTCP.h"
 #include "Shared/Core/Utils/Logging.h"
 #include "Shared/Core/Utils/DebugObjects.h"
 
@@ -32,7 +32,7 @@ LoginService::~LoginService()
 
 bool LoginService::Init()
 {
-    Connection = std::make_shared<NetConnectionWebSocket>("LoginService");
+    Connection = std::make_shared<NetConnectionTCP>("LoginService");
     int Port = ServerInstance->GetConfig().LoginServerPort;
     if (!Connection->Listen(Port))
     {

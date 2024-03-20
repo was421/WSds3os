@@ -17,7 +17,7 @@
 class Server;
 class AuthClient;
 class NetConnection;
-class NetConnectionWebSocket;
+class NetConnectionTCP;
 class RSAKeyPair;
 
 // The auth service is accessed by the client from an ip:port provided by 
