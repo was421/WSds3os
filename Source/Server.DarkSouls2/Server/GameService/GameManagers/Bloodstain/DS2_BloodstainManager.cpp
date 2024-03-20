@@ -89,6 +89,7 @@ MessageHandleResult DS2_BloodstainManager::OnMessageRecieved(GameClient* Client,
 
 MessageHandleResult DS2_BloodstainManager::Handle_RequestCreateBloodstain(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
 {
+    const RuntimeConfig& Config = ServerInstance->GetConfig();
     ServerDatabase& Database = ServerInstance->GetDatabase();
     PlayerState& Player = Client->GetPlayerState();
 
@@ -99,14 +100,37 @@ MessageHandleResult DS2_BloodstainManager::Handle_RequestCreateBloodstain(GameCl
     Data.assign(Request->data().data(), Request->data().data() + Request->data().size());
     GhostData.assign(Request->ghost_data().data(), Request->ghost_data().data() + Request->ghost_data().size());
 
-    if (std::shared_ptr<Bloodstain> ActiveStain = Database.CreateBloodstain((uint32_t)Request->online_area_id(), (uint64_t)Request->cell_id(), Player.GetPlayerId(), Player.GetSteamId(), Data, GhostData))
+    std::shared_ptr<Bloodstain> ActiveStain = nullptr;
+    if (Config.BloodstainMemoryCacheOnly)
+    {
+        ActiveStain = std::make_shared<Bloodstain>();
+        ActiveStain->BloodstainId = (uint32_t)NextMemoryCacheStainId--;
+        ActiveStain->OnlineAreaId = (uint32_t)Request->online_area_id();
+        ActiveStain->CellId = (uint64_t)Request->cell_id();
+        ActiveStain->PlayerId = Player.GetPlayerId();
+        ActiveStain->PlayerSteamId = Player.GetSteamId();
+        ActiveStain->Data = Data;
+        ActiveStain->GhostData = GhostData;
+    }
+    else
+    {
+        ActiveStain = Database.CreateBloodstain(
+            (uint32_t)Request->online_area_id(),
+            0,
+            Player.GetPlayerId(),
+            Player.GetSteamId(),
+            Data,
+            GhostData
+        );
+    }
+
+    if (ActiveStain)
     {
         LiveCache.Add({ ActiveStain->CellId, (DS2_OnlineAreaId)ActiveStain->OnlineAreaId }, ActiveStain->BloodstainId, ActiveStain);
     }
     else
     {
-        WarningS(Client->GetName().c_str(), "Disconnecting client as failed to create blood stain.");
-        return MessageHandleResult::Error;
+        WarningS(Client->GetName().c_str(), "Failed to create blood stain.");
     }
 
     std::string TypeStatisticKey = StringFormat("Bloodstain/TotalCreated");
@@ -225,15 +249,22 @@ MessageHandleResult DS2_BloodstainManager::Handle_RequestGetDeadingGhost(GameCli
     // Doesn't exist, no go.
     else
     {
-        WarningS(Client->GetName().c_str(), "Disconnecting client as failed to retrieve bloodstain '%i'", Request->bloodstain_id());
-        return MessageHandleResult::Error;
+        WarningS(Client->GetName().c_str(), "Failed to retrieve bloodstain '%i'", Request->bloodstain_id());
     }
 
     DS2_Frpg2RequestMessage::RequestGetDeadingGhostResponse Response;
     Response.set_online_area_id(Request->online_area_id());
     Response.set_cell_id(Request->cell_id());
     Response.set_bloodstain_id(Request->bloodstain_id());
-    Response.set_data(ActiveStain->GhostData.data(), ActiveStain->GhostData.size());
+
+    if (ActiveStain == nullptr)
+    {
+        Response.mutable_data();
+    }
+    else
+    {
+        Response.set_data(ActiveStain->GhostData.data(), ActiveStain->GhostData.size());
+    }
 
     if (!Client->MessageStream->Send(&Response, &Message))
     {

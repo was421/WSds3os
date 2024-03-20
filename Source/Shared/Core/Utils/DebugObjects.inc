@@ -7,6 +7,7 @@
  * If not, see <https://opensource.org/licenses/MIT>.
  */
  
+TIMER(AllServerUpdateTime, "All Server Update Time")
 TIMER(UpdateTime, "Update Time")
 TIMER(WebUIService_PollTime, "Web UI Service (Poll Time)")
 TIMER(GameService_PollTime, "Game Service (Poll Time)")
@@ -14,6 +15,8 @@ TIMER(AuthService_PollTime, "Auth Service (Poll Time)")
 TIMER(LoginService_PollTime, "Login Service (Poll Time)")
 TIMER(DatabaseQueryTime, "Database Query Time")
 TIMER(AntiCheatTime, "Anti-Cheat Time")
+
+COUNTER(DatabaseQueries, "Database Queries")
 
 COUNTER(AuthConnections, "Auth Connections")
 COUNTER(LoginConnections, "Login Connections")
@@ -27,5 +30,3 @@ COUNTER(UdpBytesSent, "UDP Bytes Sent")
 COUNTER(RequestsReceived, "Requests Received")
 COUNTER(ResponsesSent, "Responses Sent")
 COUNTER(PushMessagesSent, "Push Messages Sent")
-
-COUNTER(DatabaseQueries, "Database Queries")

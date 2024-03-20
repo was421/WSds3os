@@ -302,9 +302,11 @@ bool RuntimeConfig::Serialize(nlohmann::json& Json, bool Loading)
     SERIALIZE_VAR(BloodstainMaxLivePoolEntriesPerArea);
     SERIALIZE_VAR(BloodstainMaxDatabaseEntries);
     SERIALIZE_VAR(BloodstainPrimeCountPerArea);
+    SERIALIZE_VAR(BloodstainMemoryCacheOnly);
     SERIALIZE_VAR(GhostMaxLivePoolEntriesPerArea);
     SERIALIZE_VAR(GhostPrimeCountPerArea);
     SERIALIZE_VAR(GhostPrimeCountPerArea);
+    SERIALIZE_VAR(GhostMemoryCacheOnly);
     SERIALIZE_VAR(GhostMaxDatabaseEntries);
     SERIALIZE_VAR(QuickMatchWinXp);
     SERIALIZE_VAR(QuickMatchLoseXp);
