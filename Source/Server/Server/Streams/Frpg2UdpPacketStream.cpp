@@ -48,7 +48,7 @@ Frpg2UdpPacketStream::Frpg2UdpPacketStream(std::shared_ptr<NetConnection> InConn
 
 bool Frpg2UdpPacketStream::Pump()
 {
-    // If we have got into an error state (due to failed send/recieves) then 
+    // If we have got into an error state (due to failed send/receives) then 
     // we can bail now.
     if (InErrorState)
     {
@@ -62,7 +62,7 @@ bool Frpg2UdpPacketStream::Pump()
         ReceiveBuffer.resize(ReceiveBuffer.capacity());
         if (!Connection->Receive(ReceiveBuffer, 0, (int)ReceiveBuffer.size(), BytesReceived))
         {
-            WarningS(Connection->GetName().c_str(), "Failed to recieve on connection.");
+            WarningS(Connection->GetName().c_str(), "Failed to receive on connection.");
             InErrorState = true;
             return true;
         }
@@ -76,7 +76,7 @@ bool Frpg2UdpPacketStream::Pump()
             Frpg2UdpPacket Packet;
             if (!BytesToPacket(ReceiveBuffer, Packet))
             {
-                WarningS(Connection->GetName().c_str(), "Failed to parse recieved packet.");
+                WarningS(Connection->GetName().c_str(), "Failed to parse received packet.");
                 InErrorState = true;
                 return true;
             }

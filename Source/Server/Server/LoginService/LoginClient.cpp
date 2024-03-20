@@ -67,7 +67,7 @@ bool LoginClient::Poll()
     {
         if (Message.Header.msg_type != Frpg2MessageType::RequestQueryLoginServerInfo)
         {
-            WarningS(GetName().c_str(), "Disconnecting client as recieved unexpected packet type while expecting.");
+            WarningS(GetName().c_str(), "Disconnecting client as received unexpected packet type while expecting.");
             return true;
         }
 
@@ -76,7 +76,7 @@ bool LoginClient::Poll()
         Shared_Frpg2RequestMessage::RequestQueryLoginServerInfo Request;
         if (!Request.ParseFromArray(Message.Payload.data(), (int)Message.Payload.size()))
         {
-            WarningS(GetName().c_str(), "Disconnecting client as recieved message that could not be parsed into expected format.");
+            WarningS(GetName().c_str(), "Disconnecting client as received message that could not be parsed into expected format.");
             return true;
         }
 

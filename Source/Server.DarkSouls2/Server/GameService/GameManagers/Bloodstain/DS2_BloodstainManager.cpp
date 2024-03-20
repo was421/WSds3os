@@ -65,7 +65,7 @@ void DS2_BloodstainManager::TrimDatabase()
     Database.TrimBloodStains(MaxEntries);
 }
 
-MessageHandleResult DS2_BloodstainManager::OnMessageRecieved(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
+MessageHandleResult DS2_BloodstainManager::OnMessageReceived(GameClient* Client, const Frpg2ReliableUdpMessage& Message)
 {
     if (Message.Header.IsType(DS2_Frpg2ReliableUdpMessageType::RequestCreateBloodstain))
     {

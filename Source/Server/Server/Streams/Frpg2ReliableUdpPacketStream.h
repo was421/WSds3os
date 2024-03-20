@@ -38,7 +38,7 @@ public:
     // because of the stupid difference between ACK and DAT_ACK.
     void HandledPacket(uint32_t AckSequence);
 
-    // Returns true if a packet was recieved and stores packet in OutputPacket.
+    // Returns true if a packet was received and stores packet in OutputPacket.
     virtual bool Receive(Frpg2ReliableUdpPacket* Packet);
 
     // Overridden so we can do package retransmission/general management.
@@ -138,7 +138,7 @@ protected:
     // TODO: All these should be shared pointers or something, we do way
     //       too much data shuffling with raw packets.
 
-    // Packets that have been recieved and are awaiting processing. They will
+    // Packets that have been received and are awaiting processing. They will
     // stay in this queue until they are the next in the remote sequence index.
     std::vector<Frpg2ReliableUdpPacket> PendingReceiveQueue;
 

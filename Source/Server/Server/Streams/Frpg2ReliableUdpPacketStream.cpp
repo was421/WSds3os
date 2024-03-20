@@ -168,7 +168,7 @@ bool Frpg2ReliableUdpPacketStream::EncodeReliablePacket(const Frpg2ReliableUdpPa
 
 void Frpg2ReliableUdpPacketStream::HandleIncoming()
 {
-    // Accept any packets currently being recieved.
+    // Accept any packets currently being received.
     while (true)
     {
         Frpg2UdpPacket Packet;
@@ -296,7 +296,7 @@ void Frpg2ReliableUdpPacketStream::HandleIncomingPacket(const Frpg2ReliableUdpPa
             IsInCorrectSequence = true;
         }
 
-        // TODO: Fix this so we can queue up out of order packets and handle them when recieved. We had this before but causes issues
+        // TODO: Fix this so we can queue up out of order packets and handle them when received. We had this before but causes issues
         //       when ack values overflow.
         if (LocalAck != GetNextRemoteSequenceIndex())
         {
@@ -499,7 +499,7 @@ void Frpg2ReliableUdpPacketStream::Handle_ACK(const Frpg2ReliableUdpPacket& Pack
 }
 void Frpg2ReliableUdpPacketStream::Handle_RACK(const Frpg2ReliableUdpPacket& Packet)
 {
-    // I'm like 95% sure that RACK is "Reject ACK", its telling us the ACK recieved was invalid I think?
+    // I'm like 95% sure that RACK is "Reject ACK", its telling us the ACK received was invalid I think?
     // I think we can just ignore this ...
 
     VerboseS(Connection->GetName().c_str(), "Received RACK - Ignoring ...");

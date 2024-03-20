@@ -25,7 +25,7 @@ public:
     // is likely saturated or the packet is invalid.
     virtual bool Send(const Frpg2ReliableUdpFragment& Fragment);
 
-    // Returns true if a packet was recieved and stores packet in OutputPacket.
+    // Returns true if a packet was received and stores packet in OutputPacket.
     virtual bool Receive(Frpg2ReliableUdpFragment* Fragment);
 
     // Overridden so we can do package retransmission/general management.

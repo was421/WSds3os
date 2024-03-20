@@ -24,7 +24,7 @@
 Frpg2PacketStream::Frpg2PacketStream(std::shared_ptr<NetConnection> InConnection)
     : Connection(InConnection)
 {
-    // Initial recieve state is the size of the header.
+    // Initial receive state is the size of the header.
     PacketBytesReceived = 0;
     RecievingPacketHeader = true;
     PacketBuffer.resize(sizeof(uint16_t));
@@ -32,7 +32,7 @@ Frpg2PacketStream::Frpg2PacketStream(std::shared_ptr<NetConnection> InConnection
 
 bool Frpg2PacketStream::Pump()
 {
-    // If we have got into an error state (due to failed send/recieves) then 
+    // If we have got into an error state (due to failed send/receives) then 
     // we can bail now.
     if (InErrorState)
     {
@@ -49,7 +49,7 @@ bool Frpg2PacketStream::Pump()
                 int BytesReceived = 0;
                 if (!Connection->Receive(PacketBuffer, PacketBytesReceived, (int)PacketBuffer.size() - PacketBytesReceived, BytesReceived))
                 {
-                    WarningS(Connection->GetName().c_str(), "Failed to recieve on connection.");
+                    WarningS(Connection->GetName().c_str(), "Failed to receive on connection.");
                     InErrorState = true;
                     return true;
                 }
@@ -87,7 +87,7 @@ bool Frpg2PacketStream::Pump()
                     Frpg2Packet Packet;
                     if (!BytesToPacket(PacketBuffer, Packet))
                     {
-                        WarningS(Connection->GetName().c_str(), "Failed to parse recieved packet.");
+                        WarningS(Connection->GetName().c_str(), "Failed to parse received packet.");
                         InErrorState = true;
                         return true;
                     }

@@ -82,7 +82,7 @@ bool AuthClient::Poll()
             {
                 if (Message.Header.msg_type != Frpg2MessageType::RequestHandshake)
                 {
-                    WarningS(GetName().c_str(), "Disconnecting client as recieved unexpected packet type (%i) while expected RequestHandshake.", Message.Header.msg_type);
+                    WarningS(GetName().c_str(), "Disconnecting client as received unexpected packet type (%i) while expected RequestHandshake.", Message.Header.msg_type);
                     return true;
                 }
 
@@ -90,7 +90,7 @@ bool AuthClient::Poll()
                 Shared_Frpg2RequestMessage::RequestHandshake Request;
                 if (!Request.ParseFromArray(Message.Payload.data(), (int)Message.Payload.size()))
                 {
-                    WarningS(GetName().c_str(), "Disconnecting client as recieved unexpected message, expecting RequestHandshake.");
+                    WarningS(GetName().c_str(), "Disconnecting client as received unexpected message, expecting RequestHandshake.");
                     return true;
                 }
 
@@ -134,14 +134,14 @@ bool AuthClient::Poll()
             {
                 if (Message.Header.msg_type != Frpg2MessageType::GetServiceStatus)
                 {
-                    WarningS(GetName().c_str(), "Disconnecting client as recieved unexpected packet type while expected GetServiceStatus.");
+                    WarningS(GetName().c_str(), "Disconnecting client as received unexpected packet type while expected GetServiceStatus.");
                     return true;
                 }
 
                 Shared_Frpg2RequestMessage::GetServiceStatus Request;
                 if (!Request.ParseFromArray(Message.Payload.data(), (int)Message.Payload.size()))
                 {
-                    WarningS(GetName().c_str(), "Disconnecting client as recieved unexpected message, expecting GetServiceStatus.");
+                    WarningS(GetName().c_str(), "Disconnecting client as received unexpected message, expecting GetServiceStatus.");
                     return true;
                 }
 
@@ -184,7 +184,7 @@ bool AuthClient::Poll()
             {
                 if (Message.Header.msg_type != Frpg2MessageType::KeyMaterial)
                 {
-                    WarningS(GetName().c_str(), "Disconnecting client as recieved unexpected packet type while expected key material.");
+                    WarningS(GetName().c_str(), "Disconnecting client as received unexpected packet type while expected key material.");
                     return true;
                 }
                 if (Message.Payload.size() != 8)
@@ -226,11 +226,11 @@ bool AuthClient::Poll()
                 // Format Note:
                 // The message payload is stored as:
                 //      Bytes 0-15: GameCwcKey Calculated Above
-                //      Bytes 16- : SteamTicket as recieved from GetAuthSessionTicket
+                //      Bytes 16- : SteamTicket as received from GetAuthSessionTicket
 
                 if (Message.Header.msg_type != Frpg2MessageType::SteamTicket)
                 {
-                    WarningS(GetName().c_str(), "Disconnecting client as recieved unexpected packet type while expected steam ticket.");
+                    WarningS(GetName().c_str(), "Disconnecting client as received unexpected packet type while expected steam ticket.");
                     return true;
                 }
 

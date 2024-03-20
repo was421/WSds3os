@@ -239,7 +239,7 @@ bool NetConnectionTCP::Connect(std::string Hostname, int Port, bool ForceLastIpE
         int error = errno;
 #endif
 
-        ErrorS(GetName().c_str(), "Failed to recieve with error 0x%08x.", error);
+        ErrorS(GetName().c_str(), "Failed to receive with error 0x%08x.", error);
         return false;
     }
 
@@ -312,7 +312,7 @@ bool NetConnectionTCP::Receive(std::vector<uint8_t>& Buffer, int Offset, int Cou
             return true;
         }
 
-        ErrorS(GetName().c_str(), "Failed to recieve with error 0x%08x.", error);
+        ErrorS(GetName().c_str(), "Failed to receive with error 0x%08x.", error);
         return false;
     }
     else if (Result == 0)
