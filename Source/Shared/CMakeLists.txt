@@ -22,9 +22,6 @@ SET(SOURCES
     Core/Network/NetConnectionTCP.h
     Core/Network/NetConnectionUDP.cpp
     Core/Network/NetConnectionUDP.h
-    Core/Network/NetConnectionWebSocket.h
-    Core/Network/NetConnectionWebSocket.cpp
-    Core/Network/WebSocketProvider/WebSocketProvider.h
     Core/Network/NetHttpRequest.cpp
     Core/Network/NetHttpRequest.h
     Core/Network/NetIPAddress.cpp

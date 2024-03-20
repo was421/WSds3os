@@ -56,7 +56,8 @@ bool SettingsHandler::handleGet(CivetServer* Server, struct mg_connection* Conne
     json["disableSoulMemoryMatching"] = IsSoulMemoryMatchingDisabled();
     json["ignoreInvasionAreaFilter"] = Config.IgnoreInvasionAreaFilter;
     json["antiCheatEnabled"] = Config.AntiCheatEnabled;
-nlohmann::json announcementsJson;
+    
+    nlohmann::json announcementsJson;
     for (const auto& Announcement : Config.Announcements) {
         nlohmann::json jsonObj;
         jsonObj["header"] = Announcement.Header;
