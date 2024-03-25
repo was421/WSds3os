@@ -96,7 +96,28 @@ MessageHandleResult DS3_BloodstainManager::Handle_RequestCreateBloodstain(GameCl
     std::vector<uint8_t> GhostData;
     Data.assign(Request->data().data(), Request->data().data() + Request->data().size());
     GhostData.assign(Request->ghost_data().data(), Request->ghost_data().data() + Request->ghost_data().size());
-    
+
+    // There is no NRSSR struct in bloodstain or ghost data, but we still make sure the size-delimited entry list is valid.
+    if (BuildConfig::NRSSR_SANITY_CHECKS)
+    {
+        auto ValidationResult = DS3_NRSSRSanitizer::ValidateEntryList(Data.data(), Data.size());
+        if (ValidationResult != DS3_NRSSRSanitizer::ValidationResult::Valid)
+        {
+            WarningS(Client->GetName().c_str(), "Bloodstain metadata recieved from client is invalid (error code %i).",
+                static_cast<uint32_t>(ValidationResult));
+
+            return MessageHandleResult::Handled;
+        }
+        ValidationResult = DS3_NRSSRSanitizer::ValidateEntryList(GhostData.data(), GhostData.size());
+        if (ValidationResult != DS3_NRSSRSanitizer::ValidationResult::Valid)
+        {
+            WarningS(Client->GetName().c_str(), "Ghost data recieved from client is invalid (error code %i).",
+                static_cast<uint32_t>(ValidationResult));
+
+            return MessageHandleResult::Handled;
+        }
+    }
+
     std::shared_ptr<Bloodstain> ActiveStain = nullptr;
     if (Config.BloodstainMemoryCacheOnly)
     {
@@ -204,7 +225,7 @@ MessageHandleResult DS3_BloodstainManager::Handle_RequestGetDeadingGhost(GameCli
     // Doesn't exist, no go.
     else
     {
-        WarningS(Client->GetName().c_str(), "Failed to retrieve bloodstain '%i', returning empty ghost data.", Request->bloodstain_id());
+        WarningS(Client->GetName().c_str(), "Failed to retrieve bloodstain '%u', returning empty ghost data.", Request->bloodstain_id());
     }
 
     DS3_Frpg2RequestMessage::RequestGetDeadingGhostResponse Response;
